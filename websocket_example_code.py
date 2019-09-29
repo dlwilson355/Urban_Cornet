@@ -1,6 +1,8 @@
 # https://github.com/websocket-client/websocket-client
 
 import websocket
+print(websocket.__file__)
+import requests
 from botsettings import API_TOKEN
 try:
     import thread
@@ -9,33 +11,45 @@ except ImportError:
 import time
 
 def on_message(ws, message):
+    print("in on message")
+
     print(message)
 
 def on_error(ws, error):
-    print(error)
+    print("in on error")
+
+    print('The error is:', error)
 
 def on_close(ws):
     print("### closed ###")
 
 def on_open(ws):
-    def run(*args):
-        for i in range(3):
-            time.sleep(1)
-            ws.send("Hello %d" % i)
-        time.sleep(1)
-        ws.close()
-        print("thread terminating...")
-    thread.start_new_thread(run, ())
+    print("in on open")
+#    def run(*args):
+#        for i in range(3):
+#            time.sleep(1)
+#            ws.send("Hello %d" % i)
+#        time.sleep(1)
+#        ws.close()
+#        print("thread terminating...")
+#    thread.start_new_thread(run, ())
 
 
 if __name__ == "__main__":
     websocket.enableTrace(True)
-    #url_string = f"wss://slack.com/api/rtm.connect?token={API_TOKEN}&pretty=1"
-    url_string = f"wss://slack.com/api/chat.postMessage?token={API_TOKEN}&channel=project01&text=I'm_Jarvis&as_user=jarvis&pretty=1"
+    connect_string = f"http://slack.com/api/rtm.connect"
+    #caaaurl_string = f"wss://slack.com/api/rtm.start?token={API_TOKEN}&pretty=1"
+    #url_string = f"wss://slack.com/api/chat.postMessage?token={API_TOKEN}&channel=project01&text=I'm_Jarvis&as_user=jarvis&pretty=1"
+    url_string = requests.get(connect_string, params = {'token': API_TOKEN}).json()['url']
+    
+    
+    
+    
     ws = websocket.WebSocketApp(url_string,
                               on_message = on_message,
                               on_error = on_error,
                               on_close = on_close)
     ws.on_open = on_open
+    #on_open(ws)
     ws.run_forever()
 
