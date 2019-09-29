@@ -31,7 +31,7 @@ def on_open(ws):
 if __name__ == "__main__":
     websocket.enableTrace(True)
     #url_string = f"wss://slack.com/api/rtm.connect?token={API_TOKEN}&pretty=1"
-    url_string = f"wss://slack.com/api/chat.postMessage?token={API_TOKEN}&channel=project01&text=I'm Jarvis&as_user=jarvis&pretty=1"
+    url_string = f"wss://slack.com/api/chat.postMessage?token={API_TOKEN}&channel=project01&text=I'm_Jarvis&as_user=jarvis&pretty=1"
     ws = websocket.WebSocketApp(url_string,
                               on_message = on_message,
                               on_error = on_error,
