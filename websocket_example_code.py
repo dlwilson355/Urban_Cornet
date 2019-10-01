@@ -1,6 +1,7 @@
 # https://github.com/websocket-client/websocket-client
 
 import websocket
+import json
 print(websocket.__file__)
 import requests
 from botsettings import API_TOKEN
@@ -14,6 +15,11 @@ def on_message(ws, message):
     print("in on message")
 
     print(message)
+    if "awknowledge" in message:
+        to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "Awknowledged!"}
+        to_send = json.dumps(to_send)
+        ws.send(to_send)
+
 
 def on_error(ws, error):
     print("in on error")
@@ -26,9 +32,12 @@ def on_close(ws):
 def on_open(ws):
     print("in on open")
 #    def run(*args):
+#        print("in run")
 #        for i in range(3):
-#            time.sleep(1)
-#            ws.send("Hello %d" % i)
+#            message = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "Hello world"}
+#            message = json.dumps(message)
+#            print(type(message))
+#            ws.send(message)
 #        time.sleep(1)
 #        ws.close()
 #        print("thread terminating...")
@@ -44,7 +53,7 @@ if __name__ == "__main__":
     
     
     
-    
+    websocket.enableTrace(True)
     ws = websocket.WebSocketApp(url_string,
                               on_message = on_message,
                               on_error = on_error,
@@ -52,4 +61,3 @@ if __name__ == "__main__":
     ws.on_open = on_open
     #on_open(ws)
     ws.run_forever()
-
