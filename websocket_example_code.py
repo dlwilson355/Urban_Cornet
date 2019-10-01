@@ -1,6 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Oct  1 08:32:06 2019
+
+@author: sarafergus
+"""
+  
 # https://github.com/websocket-client/websocket-client
 
 import websocket
+import sqlite3
 import json
 print(websocket.__file__)
 import requests
@@ -10,15 +19,74 @@ try:
 except ImportError:
     import _thread as thread
 import time
-
+sqlite3 
+action = ""
+from sqlite3 import Error
+ 
+ 
+#def create_connection(db_file):
+#    """ create a database connection to a SQLite database """
+#    conn = None
+#    try:
+#        conn = sqlite3.connect(db_file)
+#        print(sqlite3.version)
+#    except Error as e:
+#        print(e)
+#    finally:
+#        if conn:
+#            conn.close()
+#def create_connection():
+#    """ create a database connection to a database that resides
+#        in the memory
+#    """
+#    conn = None;
+#    try:
+#        conn = sqlite3.connect(':memory:')
+#        print(sqlite3.version)
+#    except Error as e:
+#        print(e)
+#    finally:
+#        if conn:
+#            conn.close()
+            
 def on_message(ws, message):
-    print("in on message")
-
-    print(message)
+    global action
+    #print(message)
     if "awknowledge" in message:
         to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "Awknowledged!"}
         to_send = json.dumps(to_send)
         ws.send(to_send)
+    if "training" in message:
+        action = 'training'
+        to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I'm ready for _____. What NAME should this ACTION be?"}
+        to_send = json.dumps(to_send)
+        ws.send(to_send)
+    if action == 'time':
+        put_in_db(message)
+    if action == 'training' and 'TIME' in message.upper():
+        action = 'time'
+    if action == 'training' and 'PIZZA' in message.upper():
+        pass
+    if action == 'training' and 'GREET' in message.upper():
+        pass
+    if action == 'training' and 'WEATHER' in message.upper():
+        pass        
+    if action == 'training' and 'JOKE' in message.upper():
+        pass        
+    
+def put_in_db(message):
+    global action
+    conn = sqlite3.connect("name.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO training_data (txt,action) VALUES (?, ?)", (message, action,))
+    conn.commit() # save (commit) the changes\
+    
+def make_table(database):
+    conn = sqlite3.connect("name.db")
+    c = conn.cursor() 
+    c.execute(database)
+    conn.commit()
+    
 
 
 def on_error(ws, error):
@@ -30,7 +98,7 @@ def on_close(ws):
     print("### closed ###")
 
 def on_open(ws):
-    print("in on open")
+    pass
 #    def run(*args):
 #        print("in run")
 #        for i in range(3):
@@ -51,7 +119,11 @@ if __name__ == "__main__":
     #url_string = f"wss://slack.com/api/chat.postMessage?token={API_TOKEN}&channel=project01&text=I'm_Jarvis&as_user=jarvis&pretty=1"
     url_string = requests.get(connect_string, params = {'token': API_TOKEN}).json()['url']
     
-    
+    sql_create_training_data_table = """ CREATE TABLE IF NOT EXISTS training_data (
+                                         txt text,
+                                         action text
+                                    ); """
+    make_table(sql_create_training_data_table)
     
     websocket.enableTrace(True)
     ws = websocket.WebSocketApp(url_string,
