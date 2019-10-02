@@ -1,8 +1,8 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Oct  1 08:32:06 2019
-
 @author: sarafergus
 """
   
@@ -51,29 +51,36 @@ from sqlite3 import Error
             
 def on_message(ws, message):
     global action
-    #print(message)
+    print(message)
     if "awknowledge" in message:
         to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "Awknowledged!"}
         to_send = json.dumps(to_send)
         ws.send(to_send)
-    if "training" in message:
+    if "training" in message and 'reply_to' not in message:
         action = 'training'
-        to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I'm ready for _____. What NAME should this ACTION be?"}
+        to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I'm ready for training. What NAME should this ACTION be?"}
         to_send = json.dumps(to_send)
         ws.send(to_send)
-    if action == 'time':
+    if 'done' in message.lower():
+        action = 'done'
+        to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I'm finished training"}
+        to_send = json.dumps(to_send)
+        ws.send(to_send)
+    if action == 'time' and '"type":"message"' in message:
         put_in_db(message)
+        to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I've got it! What else?"}
+        to_send = json.dumps(to_send)
+        ws.send(to_send)
     if action == 'training' and 'TIME' in message.upper():
         action = 'time'
     if action == 'training' and 'PIZZA' in message.upper():
-        pass
+        action = 'pizza'
     if action == 'training' and 'GREET' in message.upper():
-        pass
+        action = 'greet'
     if action == 'training' and 'WEATHER' in message.upper():
-        pass        
+        action = 'weather'        
     if action == 'training' and 'JOKE' in message.upper():
-        pass        
-    
+        action = 'joke'        
 def put_in_db(message):
     global action
     conn = sqlite3.connect("name.db")
@@ -87,8 +94,6 @@ def make_table(database):
     c.execute(database)
     conn.commit()
     
-
-
 def on_error(ws, error):
     print("in on error")
 
