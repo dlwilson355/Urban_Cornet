@@ -72,7 +72,7 @@ def on_message(ws, message):
         to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I've got it! What else?"}
         to_send = json.dumps(to_send)
         ws.send(to_send)
-    if action == 'training' and 'TIME' in message.upper():
+    if action == 'training' and 'TIME' in message.upper() and 'TRAINING' not in message.upper():
         action = 'time'
     if action == 'training' and 'PIZZA' in message.upper():
         action = 'pizza'
