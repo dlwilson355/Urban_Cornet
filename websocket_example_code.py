@@ -50,6 +50,7 @@ from sqlite3 import Error
 #            conn.close()
             
 def on_message(ws, message):
+    category_actions = ['time', 'pizza', 'greet', 'weather', 'joke']
     global action
     print(message)
     if "awknowledge" in message:
@@ -66,7 +67,7 @@ def on_message(ws, message):
         to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I'm finished training"}
         to_send = json.dumps(to_send)
         ws.send(to_send)
-    if action == 'time' and '"type":"message"' in message:
+    if action in category_actions and '"type":"message"' in message:
         put_in_db(message)
         to_send = {"id": 1, "type": "message", "channel": "CNPJBJZ29", "text": "OK, I've got it! What else?"}
         to_send = json.dumps(to_send)
