@@ -24,6 +24,7 @@ from botsettings import API_TOKEN
 class Jarvis:
     def __init__(self):
         self.action = ""
+        self.classifier = self.get_model()
         self.db_connection, self.db_cursor = self.initialize_database()
         self.ws_connection = self.initialize_slack_connection()
         self.ws_connection.run_forever()
@@ -93,6 +94,11 @@ class Jarvis:
             self.send_message(f"OK, Let's call this action `{self.action.upper()}`. "
                               "Now give me some training text!")
 
+        # check if a prediction should be made
+        elif self.action == 'testing' and message_content:
+            self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`..."
+                              "Write me something else and I'll try to figure it out.")
+
     def add_to_database(self, entities):
         """This function adds the passed entities to Jarvis' database."""
 
@@ -148,24 +154,29 @@ class Jarvis:
         print("Experienced an error.\n"
               f"The error is: {error}.")
 
-    def get_pipeline(self):
-        """Returns the pipeline used in Jarvis' brain."""
-
-        raise NotImplementedError
-
     def train(self):
         """Calling this function makes Jarvis train his brain."""
 
-        self.send_message("I'm training my brain with the data you've already given me...\n"
-                          "OK, I'm ready for testing. Write me something and I'll try to figure it out.")
-        X, Y = self.get_database_data()
-        print(X)
-        print(Y)
+        self.send_message("I'm training my brain with the data you've already given me...")
+        x, y = self.get_database_data()
+        self.classifier.fit(x, y)
+        self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
 
-    def evaluate(self, X):
-        """Jarvis will evaluate the data and return the corresponding predictions."""
+    def predict(self, text):
+        """Jarvis will evaluate the text and return the corresponding prediction."""
 
-        raise NotImplementedError
+        return self.classifier.predict([text])[0]
+
+    def get_model(self):
+        """Returns the model used in Jarvis' brain."""
+
+        pipeline = Pipeline([
+            ('vect', CountVectorizer()),
+            ('tfidf', TfidfTransformer()),
+            ('clf', MultinomialNB()),
+        ])
+
+        return pipeline
 
     def get_database_data(self):
         """Returns the data stored in Jarvis' database."""
@@ -175,12 +186,12 @@ class Jarvis:
         data = self.db_cursor.fetchall()
 
         # sort the messages and labels
-        X, Y = [], []
+        x, y = [], []
         for row in data:
-            X.append(row[0])
-            Y.append(row[1])
+            x.append(row[0])
+            y.append(row[1])
 
-        return X, Y
+        return x, y
 
     def get_data_from_files(self, dir_path):
         """Returns the data from the files in the directory."""
