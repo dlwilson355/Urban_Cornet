@@ -9,6 +9,11 @@ import websocket
 import sqlite3
 import json
 import requests
+import sklearn
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
 from botsettings import API_TOKEN
 
 
@@ -130,6 +135,31 @@ class Jarvis:
 
         print("in on error")
         print('The error is:', error)
+
+    def get_pipeline(self):
+        """Returns the pipeline used in Jarvis' brain."""
+
+        raise NotImplementedError
+
+    def train(self, X, Y):
+        """Calling this function makes Jarvis train his brain."""
+
+        raise NotImplementedError
+
+    def evaluate(self, X):
+        """Jarvis will evaluate the data and return the corresponding predictions."""
+
+        raise NotImplementedError
+
+    def get_database_data(self):
+        """Returns the data stored in Jarvis' database."""
+
+        raise NotImplementedError
+
+    def get_data_from_files(self, dir_path):
+        """Returns the data from the files in the directory."""
+
+        raise NotImplementedError
 
 
 if __name__ == "__main__":
