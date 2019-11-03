@@ -2,6 +2,9 @@
 Authors: Daniel Wilson, Sarah Fergus, Noah Stracqualursi
 This file contains the code for running a slack bot (Jarvis).
 It uses the python website client to connect to Slack's RTM API.
+TODO: Finish implementing "brain."
+TODO: Add enumerate variable for states.
+TODO: Make it so bot channel is no longer hard wired.
 """
 
 
@@ -61,15 +64,23 @@ class Jarvis:
         message_content = self.get_message_content(message)
 
         # check if training should start
-        if "training" in message_content:
+        if "training time" in message_content:
             self.action = 'training'
             self.send_message("OK, I'm ready for training. "
                               "What NAME should this ACTION be?")
 
-        # check if training should stop
+        # check if testing should start
+        elif "testing time" in message_content:
+            self.action = 'testing'
+            self.train()
+
+        # check if training or testing should stop
         elif 'done' in message_content:
+            # if action is one of the labels, it means Jarvis is training
+            if self.action in category_actions:
+                self.action = 'training'
+            self.send_message(f"OK, I'm finished {self.action}.")
             self.action = 'done'
-            self.send_message("OK, I'm finished training")
 
         # check if new message should be learned
         elif self.action in category_actions and message_content:
@@ -134,18 +145,22 @@ class Jarvis:
     def on_error(self, error):
         """Prints an error encountered by the bot."""
 
-        print("in on error")
-        print('The error is:', error)
+        print("Experienced an error.\n"
+              f"The error is: {error}.")
 
     def get_pipeline(self):
         """Returns the pipeline used in Jarvis' brain."""
 
         raise NotImplementedError
 
-    def train(self, X, Y):
+    def train(self):
         """Calling this function makes Jarvis train his brain."""
 
-        raise NotImplementedError
+        self.send_message("I'm training my brain with the data you've already given me...\n"
+                          "OK, I'm ready for testing. Write me something and I'll try to figure it out.")
+        X, Y = self.get_database_data()
+        print(X)
+        print(Y)
 
     def evaluate(self, X):
         """Jarvis will evaluate the data and return the corresponding predictions."""
@@ -155,10 +170,25 @@ class Jarvis:
     def get_database_data(self):
         """Returns the data stored in Jarvis' database."""
 
-        raise NotImplementedError
+        # load the data from the database
+        self.db_cursor.execute("SELECT * from training_data")
+        data = self.db_cursor.fetchall()
+
+        # sort the messages and labels
+        X, Y = [], []
+        for row in data:
+            X.append(row[0])
+            Y.append(row[1])
+
+        return X, Y
 
     def get_data_from_files(self, dir_path):
         """Returns the data from the files in the directory."""
+
+        raise NotImplementedError
+
+    def convert_labels(self):
+        """Converts labels between ints and their corresponding strings."""
 
         raise NotImplementedError
 
