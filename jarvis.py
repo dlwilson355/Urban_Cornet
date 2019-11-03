@@ -54,42 +54,26 @@ class Jarvis:
         category_actions = ['time', 'pizza', 'greet', 'weather', 'joke']
         message_content = self.get_message_content(message)
 
+        # check if training should start
         if "training" in message_content:
             self.action = 'training'
             self.send_message("OK, I'm ready for training. "
                               "What NAME should this ACTION be?")
 
+        # check if training should stop
         elif 'done' in message_content:
             self.action = 'done'
             self.send_message("OK, I'm finished training")
 
-        elif len(message_content) > 0 and self.action in category_actions:
+        # check if new message should be learned
+        elif self.action in category_actions and message_content:
             self.add_to_database((message_content, self.action))
             self.send_message("OK, I've got it! What else?")
 
-        elif "time" == message_content and self.action == 'training':
-            self.action = 'time'
-            self.send_message("OK, Let's call this action `TIME`. "
-                              "Now give me some training text!")
-
-        elif "pizza" == message_content and self.action == 'training':
-            self.action = 'pizza'
-            self.send_message("OK, Let's call this action `PIZZA`. "
-                              "Now give me some training text!")
-
-        elif "greet" == message_content and self.action == 'training':
-            self.action = 'greet'
-            self.send_message("OK, Let's call this action `GREET`. "
-                              "Now give me some training text!")
-
-        elif "weather" == message_content and self.action == 'training':
-            self.action = 'weather'
-            self.send_message("OK, Let's call this action `WEATHER`. "
-                              "Now give me some training text!")
-
-        elif "joke" == message_content and self.action == 'training':
-            self.action = 'joke'
-            self.send_message("OK, Let's call this action `JOKE`. "
+        # check if new action should be learned
+        elif self.action == 'training' and message_content:
+            self.action = message_content
+            self.send_message(f"OK, Let's call this action `{self.action.upper()}`. "
                               "Now give me some training text!")
 
     def add_to_database(self, entities):
