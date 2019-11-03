@@ -14,6 +14,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
+import pickle
 from botsettings import API_TOKEN
 
 
@@ -158,6 +159,16 @@ class Jarvis:
 
     def get_data_from_files(self, dir_path):
         """Returns the data from the files in the directory."""
+
+        raise NotImplementedError
+
+    def save_brain(self):
+        """Saves Jarvis' brain to a file."""
+
+        raise NotImplementedError
+
+    def load_brain(self):
+        """Loads Jarvis' brain from a file."""
 
         raise NotImplementedError
 
