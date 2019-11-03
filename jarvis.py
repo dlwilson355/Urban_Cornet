@@ -18,11 +18,16 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 import pickle
-from botsettings import API_TOKEN
+import os
+from botsettings import API_TOKEN, BRAIN_SAVE_FILE_PATH
 
 
 class Jarvis:
     def __init__(self):
+        f = open("gur99.txt", "w+")
+        for i in range(10):
+            f.write("New line")
+        f.close()
         self.action = ""
         self.classifier = self.get_model()
         self.db_connection, self.db_cursor = self.initialize_database()
@@ -65,15 +70,23 @@ class Jarvis:
         message_content = self.get_message_content(message)
 
         # check if training should start
-        if "training time" in message_content:
+        if 'training time' in message_content:
             self.action = 'training'
             self.send_message("OK, I'm ready for training. "
                               "What NAME should this ACTION be?")
 
         # check if testing should start
-        elif "testing time" in message_content:
-            self.action = 'testing'
+        elif 'testing time' in message_content:
             self.train()
+            self.action = 'testing'
+            self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
+
+        # check if Jarvis' brain should be loaded
+        elif 'load brain' in message_content:
+            self.load_brain()
+            self.action = 'testing'
+            self.send_message("I've loaded my brain and am ready for testing. "
+                              "Write me something and I'll try to figure it out.")
 
         # check if training or testing should stop
         elif 'done' in message_content:
@@ -96,7 +109,7 @@ class Jarvis:
 
         # check if a prediction should be made
         elif self.action == 'testing' and message_content:
-            self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`..."
+            self.send_message(f"OK, I think the action you mean is `{self.predict(message_content).upper()}`...\n"
                               "Write me something else and I'll try to figure it out.")
 
     def add_to_database(self, entities):
@@ -160,7 +173,7 @@ class Jarvis:
         self.send_message("I'm training my brain with the data you've already given me...")
         x, y = self.get_database_data()
         self.classifier.fit(x, y)
-        self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
+        self.save_brain()
 
     def predict(self, text):
         """Jarvis will evaluate the text and return the corresponding prediction."""
@@ -206,12 +219,12 @@ class Jarvis:
     def save_brain(self):
         """Saves Jarvis' brain to a file."""
 
-        raise NotImplementedError
+        pickle.dump(self.classifier, open(BRAIN_SAVE_FILE_PATH, 'wb'))
 
     def load_brain(self):
         """Loads Jarvis' brain from a file."""
 
-        raise NotImplementedError
+        self.classifier = pickle.load(open(BRAIN_SAVE_FILE_PATH, 'rb'))
 
 
 if __name__ == "__main__":
