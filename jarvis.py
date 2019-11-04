@@ -3,8 +3,9 @@ Authors: Daniel Wilson, Sarah Fergus, Noah Stracqualursi
 This file contains the code for running a slack bot (Jarvis).
 It uses the python website client to connect to Slack's RTM API.
 TODO: Finish implementing "brain."
-TODO: Add enumerate variable for states.
+TODO: Add enumerated variable for states.
 TODO: Make it so bot channel is no longer hard wired.
+TODO: Experiment with different models and hyperparameters.
 """
 
 
@@ -19,15 +20,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 import pickle
 import os
-from botsettings import API_TOKEN, BRAIN_SAVE_FILE_PATH
+from botsettings import API_TOKEN
+
+
+BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pk1"
+DATA_DIRECTORY = "data"
+DATABASE_FILEPATH = "jarvis.db"
 
 
 class Jarvis:
     def __init__(self):
-        f = open("gur99.txt", "w+")
-        for i in range(10):
-            f.write("New line")
-        f.close()
         self.action = ""
         self.classifier = self.get_model()
         self.db_connection, self.db_cursor = self.initialize_database()
@@ -37,7 +39,7 @@ class Jarvis:
     def initialize_database(self):
         """This function connects Jarvis to the database."""
 
-        connection = sqlite3.connect("jarvis.db")
+        connection = sqlite3.connect(DATABASE_FILEPATH)
         cursor = connection.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS training_data "
                        "(txt text, action text)")
@@ -66,7 +68,7 @@ class Jarvis:
     def on_message(self, message):
         """Controls a bot's response to receiving a message."""
 
-        category_actions = ['time', 'pizza', 'greet', 'weather', 'joke']
+        category_actions = ['TIME', 'PIZZA', 'GREET', 'WEATHER', 'JOKE']
         message_content = self.get_message_content(message)
 
         # check if training should start
@@ -103,13 +105,13 @@ class Jarvis:
 
         # check if new action should be learned
         elif self.action == 'training' and message_content:
-            self.action = message_content
-            self.send_message(f"OK, Let's call this action `{self.action.upper()}`. "
+            self.action = message_content.upper()
+            self.send_message(f"OK, Let's call this action `{self.action}`. "
                               "Now give me some training text!")
 
         # check if a prediction should be made
         elif self.action == 'testing' and message_content:
-            self.send_message(f"OK, I think the action you mean is `{self.predict(message_content).upper()}`...\n"
+            self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`...\n"
                               "Write me something else and I'll try to figure it out.")
 
     def add_to_database(self, entities):
@@ -172,6 +174,11 @@ class Jarvis:
 
         self.send_message("I'm training my brain with the data you've already given me...")
         x, y = self.get_database_data()
+        # print(x)
+        # print(y)
+        # x2, y2 = self.get_data_from_files()
+        # print(x2)
+        # print(y2)
         self.classifier.fit(x, y)
         self.save_brain()
 
@@ -206,10 +213,20 @@ class Jarvis:
 
         return x, y
 
-    def get_data_from_files(self, dir_path):
+    def get_data_from_files(self):
         """Returns the data from the files in the directory."""
 
-        raise NotImplementedError
+        x, y = [], []
+
+        for file_path in os.listdir(DATA_DIRECTORY):
+            with open(os.path.join(DATA_DIRECTORY, file_path), 'r') as f:
+                for line in f.readlines():
+                    print(line)
+                    text, label = line.split(",")
+                    x.append(text)
+                    y.append(label)
+
+        return x, y
 
     def convert_labels(self):
         """Converts labels between ints and their corresponding strings."""
