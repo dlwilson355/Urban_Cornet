@@ -23,9 +23,11 @@ import os
 from botsettings import API_TOKEN
 
 
-BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pk1"
+# some global settings controlling Jarvis' behavior
+BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
 DATA_DIRECTORY = "data"
-DATABASE_FILEPATH = "jarvis.db"
+DATABASE_FILE_PATH = "jarvis.db"
+LEARNABLE_ACTIONS = ['TIME', 'PIZZA', 'GREET', 'WEATHER', 'JOKE']
 
 
 class Jarvis:
@@ -39,7 +41,7 @@ class Jarvis:
     def initialize_database(self):
         """This function connects Jarvis to the database."""
 
-        connection = sqlite3.connect(DATABASE_FILEPATH)
+        connection = sqlite3.connect(DATABASE_FILE_PATH)
         cursor = connection.cursor()
         cursor.execute("CREATE TABLE IF NOT EXISTS training_data "
                        "(txt text, action text)")
@@ -68,7 +70,6 @@ class Jarvis:
     def on_message(self, message):
         """Controls a bot's response to receiving a message."""
 
-        category_actions = ['TIME', 'PIZZA', 'GREET', 'WEATHER', 'JOKE']
         message_content = self.get_message_content(message)
 
         # check if training should start
@@ -93,13 +94,13 @@ class Jarvis:
         # check if training or testing should stop
         elif 'done' in message_content:
             # if action is one of the labels, it means Jarvis is training
-            if self.action in category_actions:
+            if self.action in LEARNABLE_ACTIONS:
                 self.action = 'training'
             self.send_message(f"OK, I'm finished {self.action}.")
             self.action = 'done'
 
         # check if new message should be learned
-        elif self.action in category_actions and message_content:
+        elif self.action in LEARNABLE_ACTIONS and message_content:
             self.add_to_database((message_content, self.action))
             self.send_message("OK, I've got it! What else?")
 
@@ -173,13 +174,9 @@ class Jarvis:
         """Calling this function makes Jarvis train his brain."""
 
         self.send_message("I'm training my brain with the data you've already given me...")
-        x, y = self.get_database_data()
-        # print(x)
-        # print(y)
-        # x2, y2 = self.get_data_from_files()
-        # print(x2)
-        # print(y2)
-        self.classifier.fit(x, y)
+        x_db, y_db = self.get_database_data()
+        x_files, y_files = self.get_data_from_files()
+        self.classifier.fit(x_db + x_files, y_db + y_files)
         self.save_brain()
 
     def predict(self, text):
@@ -218,11 +215,25 @@ class Jarvis:
 
         x, y = [], []
 
+        # iterate through the data files, open the file, and read and strip the lines
         for file_path in os.listdir(DATA_DIRECTORY):
-            with open(os.path.join(DATA_DIRECTORY, file_path), 'r') as f:
+            with open(os.path.join(DATA_DIRECTORY, file_path), 'r', encoding="utf8") as f:
                 for line in f.readlines():
-                    print(line)
-                    text, label = line.split(",")
+                    line = line.strip()
+
+                    # check if it is formatted as json and load it accordingly
+                    if line[0] == "{" and line[-1] == "}":
+                        data_dict = json.loads(line)
+                        text = data_dict["TXT"]
+                        label = data_dict["ACTION"]
+
+                    # otherwise parse the string
+                    else:
+                        splits = line.split(",")
+                        text = ",".join(splits[:-1])
+                        label = splits[-1]
+
+                    # append the text and label
                     x.append(text)
                     y.append(label)
 
