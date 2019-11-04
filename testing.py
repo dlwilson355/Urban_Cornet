@@ -54,4 +54,5 @@ for filename in glob.glob('*-*'):
                 wrong +=1 
         print(filename, ': ', correct,' correct', wrong, ' wrong.', round(correct/(wrong+ correct),2)*100, 'percent')        
         percents.append(correct/(wrong+correct))
-            
+        
+print(sum(percents)/len(percents))            
