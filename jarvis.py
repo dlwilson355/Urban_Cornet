@@ -186,7 +186,7 @@ class Jarvis:
         #scores = cross_validate(self.classifier, all_x, all_y, cv=10)
         #self.send_message(f"I got a mean cross validation accuracy of {scores['test_score'].mean():.2f}.")
         self.classifier.fit(all_x, all_y)
-        self.send_message(f"I got a mean cross validation accuracy of {self.classifier.best_score_:.2f}.")
+        self.send_message(f"I got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
         self.send_message(f"These were the parameters that worked best were {self.classifier.best_params_}.")
 
         # save the resulting brain
@@ -209,7 +209,10 @@ class Jarvis:
         params = {
             'vect__ngram_range': [(1, 1), (1, 2)],
             'tfidf__use_idf': (True, False),
+            'clf__loss': ('hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron'),
             'clf__alpha': (1e-2, 1e-3),
+            'clf__penalty': ('none', 'l1', 'l2', 'elasticnet'),
+            'clf__early_stopping': (True, False),
         }
 
         model = GridSearchCV(pipeline, params, iid=False, cv=10, n_jobs=-1)
