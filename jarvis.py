@@ -16,6 +16,7 @@ import requests
 import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
 import pickle
@@ -80,7 +81,7 @@ class Jarvis:
 
         # check if testing should start
         elif 'testing time' in message_content:
-            self.train_and_validate()
+            self.train()
             self.action = 'testing'
             self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
 
@@ -170,21 +171,23 @@ class Jarvis:
         print("Experienced an error.\n"
               f"The error is: {error}.")
 
-    def train_and_validate(self):
+    def train(self):
         """Calling this function makes Jarvis train his brain."""
 
         self.send_message("I'm training my brain with the data you've already given me...")
 
-        # load a split the data
+        # load and merge the data sources
         x_db, y_db = self.get_database_data()
         x_files, y_files = self.get_data_from_files()
         all_x, all_y = x_db + x_files, y_db + y_files
         #x_train, x_test, y_train, y_test = train_test_split(all_x, all_y, test_size=0.25)
 
-        # fit and validate the classifier
-        scores = cross_validate(self.classifier, all_x, all_y, cv=10)
-        self.send_message(f"I got a mean cross validation accuracy of {scores['test_score'].mean():.2f}.")
+        # fit the classifier
+        #scores = cross_validate(self.classifier, all_x, all_y, cv=10)
+        #self.send_message(f"I got a mean cross validation accuracy of {scores['test_score'].mean():.2f}.")
         self.classifier.fit(all_x, all_y)
+        self.send_message(f"I got a mean cross validation accuracy of {self.classifier.best_score_:.2f}.")
+        self.send_message(f"These were the parameters that worked best were {self.classifier.best_params_}.")
 
         # save the resulting brain
         self.save_brain()
@@ -200,10 +203,18 @@ class Jarvis:
         pipeline = Pipeline([
             ('vect', CountVectorizer()),
             ('tfidf', TfidfTransformer()),
-            ('clf', MultinomialNB()),
+            ('clf', SGDClassifier()),
         ])
 
-        return pipeline
+        params = {
+            'vect__ngram_range': [(1, 1), (1, 2)],
+            'tfidf__use_idf': (True, False),
+            'clf__alpha': (1e-2, 1e-3),
+        }
+
+        model = GridSearchCV(pipeline, params, iid=False, cv=10, n_jobs=-1)
+
+        return model
 
     def get_database_data(self):
         """Returns the data stored in Jarvis' database."""
