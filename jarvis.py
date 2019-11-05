@@ -17,7 +17,7 @@ import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
 import pickle
 import os
 from botsettings import API_TOKEN
@@ -80,7 +80,7 @@ class Jarvis:
 
         # check if testing should start
         elif 'testing time' in message_content:
-            self.train()
+            self.train_and_validate()
             self.action = 'testing'
             self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
 
@@ -170,13 +170,23 @@ class Jarvis:
         print("Experienced an error.\n"
               f"The error is: {error}.")
 
-    def train(self):
+    def train_and_validate(self):
         """Calling this function makes Jarvis train his brain."""
 
         self.send_message("I'm training my brain with the data you've already given me...")
+
+        # load a split the data
         x_db, y_db = self.get_database_data()
         x_files, y_files = self.get_data_from_files()
-        self.classifier.fit(x_db + x_files, y_db + y_files)
+        all_x, all_y = x_db + x_files, y_db + y_files
+        #x_train, x_test, y_train, y_test = train_test_split(all_x, all_y, test_size=0.25)
+
+        # fit and validate the classifier
+        scores = cross_validate(self.classifier, all_x, all_y, cv=10)
+        self.send_message(f"I got a mean cross validation accuracy of {scores['test_score'].mean():.2f}.")
+        self.classifier.fit(all_x, all_y)
+
+        # save the resulting brain
         self.save_brain()
 
     def predict(self, text):
