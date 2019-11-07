@@ -23,6 +23,8 @@ import pickle
 import os
 import glob
 import random
+import warnings
+warnings.filterwarnings("ignore", category=Warning)
 
 def j_read(filename):
     data = []
@@ -79,12 +81,13 @@ def fit_brain(data):
 
 def test_brain(brain, percents, filename, fname):
     #these two were kept as bad files
+    wrongs = []
     if fname == './data/11ebcd49-428a-1c22-d5fd-b76a19fbeb1d':
         pass
     elif fname == './data/12e0c8b2-bad6-40fb-1948-8dec4f65d4d9':
         pass
     #avoid data leak
-    elif fname in filename:
+    elif fname == filename:
         pass
     #testing
     else:
@@ -95,9 +98,10 @@ def test_brain(brain, percents, filename, fname):
             if [item[1]] == brain.predict([item[0]]):
                 correct +=1
             else:
-                wrong +=1 
+                wrong +=1
+                wrongs.append(item[1])
 #        print(fname[-10:], ': ', correct,' correct', wrong, ' wrong.', round(correct/(wrong+ correct),2)*100, 'percent')        
-        percents.append(correct/(wrong+correct))  
+        percents.append(correct/(wrong+correct))
     return percents
 
 def our_data():
@@ -114,7 +118,7 @@ def our_data():
     for row in data:
         x.append(row[0])
         y.append(row[1])
-
+    print(len(x))
     return x, y
 
 def plot_percents(percents):
@@ -136,8 +140,11 @@ def plot_percents(percents):
 
 def compare_accuracy():
     percents = []
+    all_percents = []
     o_accuracy = []
-    for filename in glob.glob('./data/s*-*'):
+    i = 0
+    for filename in glob.glob('./data/*-*'):
+        print(i)
         data = read_file(filename)
         data = list(zip(*data))
         brain = fit_brain(data)
@@ -146,7 +153,11 @@ def compare_accuracy():
             continue
         for fname in glob.glob('./data/*-*'):
             percents = test_brain(brain, percents, [filename], fname)
-    plot_percents(percents)
+        all_percents.append(sum(percents)/len(percents))
+        percents = []
+        i += 1
+    plot_percents(all_percents)
+    print(len(all_percents))
     # get info for our data
     our_brain = fit_brain(our_data())
     o_accuracy = []
@@ -157,9 +168,9 @@ def compare_accuracy():
 def get_filenames():
     filenames = []
     for filename in glob.glob('./data/*-*'):
-        if fname == './data/11ebcd49-428a-1c22-d5fd-b76a19fbeb1d':
+        if filename == './data/11ebcd49-428a-1c22-d5fd-b76a19fbeb1d':
             pass
-        elif fname == './data/12e0c8b2-bad6-40fb-1948-8dec4f65d4d9':
+        elif filename == './data/12e0c8b2-bad6-40fb-1948-8dec4f65d4d9':
             pass
         else:
             filenames.append(filename)
@@ -184,12 +195,54 @@ def compare_sizes():
         next_file = list(zip(*(read_file(next_file))))
         data = [data[0] + list(next_file[0]), data[1] + list(next_file[1])]
         print(len(data[0]))
+        
     plt.scatter(sizes, percents)
     plt.title("Accuracy of Brain Based on Size of Training Data")
     plt.xlabel("Items in Training Data")
     plt.ylabel("Accuracy (percent as decimal)")
     plt.show()
     
+def EDA():
+    sizes = []
+    types = {'PIZZA': 0, 'GREET':0,'JOKE':0,'WEATHER':0, 'TIME':0}
+    filenames= get_filenames()
+    for f in filenames:
+        data = read_file(f)
+        sizes.append(len(data))
+        data = list(zip(*data))
+        for item in data[1]:
+            for jtem in list(types.keys()):
+                if item == jtem:
+                    types[jtem] += 1
+    sizes.sort()
+    plt.hist(sizes[:-4], bins = 'auto')
+    print(sizes[-4:])
+    plt.title("Data File Sizes")
+    plt.xlabel("Number of Phrases")
+    plt.ylabel("Count")
+    plt.show()
+    plt.bar([1,2,3,4,5], list(types.values()))
+    plt.xticks([1,2,3,4,5], ('PIZZA','GREET','JOKE','WEATHER','TIME'))
+    plt.title("Types of Phrases")
+    plt.xlabel('Action')
+    plt.ylabel('Count')
+    plt.show()
+    
+def combine_stuff():
+    filenames = get_filenames()
+    for file in filenames:
+        filenames.remove(file)
+        data = read_file(file)
+        data = list(zip(*data))
+        while len(data[0]) < 60:
+            next_file = random.choice(filenames)
+            filenames.remove(next_file)
+        next_file = list(zip(*(read_file(next_file))))
+        data = [data[0] + list(next_file[0]), data[1] + list(next_file[1])]
 
-compare_accuracy()
-compare_sizes()
+#our_data()    
+    
+#EDA()    
+#compare_accuracy()
+#compare_sizes()
+    
