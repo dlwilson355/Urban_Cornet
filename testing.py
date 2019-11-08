@@ -5,28 +5,26 @@ Created on Mon Nov  4 16:30:14 2019
 
 @author: sarafergus
 """
-import pickle
 from csv import reader
+from sklearn.model_selection import GridSearchCV
 import json
-import websocket
 import matplotlib.pyplot as plt
 import sqlite3
 import statistics
-import json
-import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
-import pickle
-import os
 import glob
 import random
 import warnings
+
+PATTERN = './data/*-*'
+DATABASE_FILE_PATH = "jarvis.db"
+
 warnings.filterwarnings("ignore", category=Warning)
 
-def j_read(filename):
+def json_read(filename):
+    """read_file helper function"""
     data = []
     f = open(filename)
     for line in f:
@@ -35,6 +33,7 @@ def j_read(filename):
     return data
 
 def csv_read(filename):
+    """read_file helper function"""
     data = []
     f = open(filename)
     for line in reader(f):
@@ -42,9 +41,10 @@ def csv_read(filename):
     return data
         
 def read_file(filename):
+    """read external data file"""
     f = open(filename)
     if '{' in f.readline():
-        data = j_read(filename)
+        data = json_read(filename)
     else:
         data = csv_read(filename)
     return data
@@ -72,22 +72,19 @@ def get_model():
     return model
 
 def fit_brain(data):
+    """fit brain to data"""
     brain = get_model()
     try: 
         brain.fit(data[0],data[1])
-    except Exception as e:
+    #file is too small to train brain
+    except ValueError:
         brain = None
     return brain
 
 def test_brain(brain, percents, filename, fname):
-    #these two were kept as bad files
-    wrongs = []
-    if fname == './data/11ebcd49-428a-1c22-d5fd-b76a19fbeb1d':
-        pass
-    elif fname == './data/12e0c8b2-bad6-40fb-1948-8dec4f65d4d9':
-        pass
+    """Test brain against data not used for training"""
     #avoid data leak
-    elif fname == filename:
+    if fname == filename:
         pass
     #testing
     else:
@@ -99,13 +96,13 @@ def test_brain(brain, percents, filename, fname):
                 correct +=1
             else:
                 wrong +=1
-                wrongs.append(item[1])
 #        print(fname[-10:], ': ', correct,' correct', wrong, ' wrong.', round(correct/(wrong+ correct),2)*100, 'percent')        
         percents.append(correct/(wrong+correct))
     return percents
 
-def our_data():
-    connection = sqlite3.connect('jarvis.db')
+def DB_data():
+    """Get data from our database"""
+    connection = sqlite3.connect(DATABASE_FILE_PATH)
     cursor = connection.cursor()
     cursor.execute("CREATE TABLE IF NOT EXISTS training_data "
                        "(txt text, action text)")
@@ -122,6 +119,7 @@ def our_data():
     return x, y
 
 def plot_percents(percents):
+    """Plot accuracy of various brains"""
     fig, ax = plt.subplots()
     mu = statistics.mean(percents)
     sigma = (statistics.stdev(percents))
@@ -139,53 +137,52 @@ def plot_percents(percents):
  
 
 def compare_accuracy():
+    """Determine accuracy of brain"""
     percents = []
     all_percents = []
-    o_accuracy = []
+    db_accuracy = []
     i = 0
-    for filename in glob.glob('./data/*-*'):
-        print(i)
+    for filename in get_filenames():
         data = read_file(filename)
         data = list(zip(*data))
         brain = fit_brain(data)
         if not brain:
             #datafile is too small for training
             continue
-        for fname in glob.glob('./data/*-*'):
+        for fname in get_filenames():
             percents = test_brain(brain, percents, [filename], fname)
         all_percents.append(sum(percents)/len(percents))
         percents = []
         i += 1
     plot_percents(all_percents)
-    print(len(all_percents))
+    
     # get info for our data
-    our_brain = fit_brain(our_data())
-    o_accuracy = []
-    for fname in glob.glob('./data/*-*'):
-        o_accuracy = test_brain(our_brain, o_accuracy, ['none'], fname)
-    print("Our Accuracy: ", sum(o_accuracy)/len(o_accuracy))
+    db_brain = fit_brain(DB_data())
+    db_accuracy = []
+    for fname in get_filenames():
+        db_accuracy = test_brain(db_brain, db_accuracy, ['none'], fname)
+    print("Our Accuracy: ", sum(db_accuracy)/len(db_accuracy))
 
 def get_filenames():
+    """Get external data files"""
     filenames = []
-    for filename in glob.glob('./data/*-*'):
-        if filename == './data/11ebcd49-428a-1c22-d5fd-b76a19fbeb1d':
-            pass
-        elif filename == './data/12e0c8b2-bad6-40fb-1948-8dec4f65d4d9':
-            pass
-        else:
-            filenames.append(filename)
+    for filename in glob.glob(PATTERN):
+        filenames.append(filename)
     return filenames
 
 def compare_sizes():
-    data = our_data()
+    """Grow size of training data and test for accuracy on each size"""
+    data = DB_data()
     filenames = get_filenames()
     sizes = []
     data_names = []
     percent = []
     percents = []
+    
+    #grow size of training data
     while len(data[0]) < 1000:
         brain = fit_brain(data)
-        for fname in glob.glob('./data/*-*'):
+        for fname in get_filenames():
             percent = test_brain(brain, percent, data_names, fname)
         percents.append(sum(percent)/len(percent))
         sizes.append(len(data[0]))
@@ -194,8 +191,8 @@ def compare_sizes():
         filenames.remove(next_file)
         next_file = list(zip(*(read_file(next_file))))
         data = [data[0] + list(next_file[0]), data[1] + list(next_file[1])]
-        print(len(data[0]))
-        
+    
+    #plot    
     plt.scatter(sizes, percents)
     plt.title("Accuracy of Brain Based on Size of Training Data")
     plt.xlabel("Items in Training Data")
@@ -211,16 +208,18 @@ def EDA():
         sizes.append(len(data))
         data = list(zip(*data))
         for item in data[1]:
-            for jtem in list(types.keys()):
+            for jtem in types.keys():
                 if item == jtem:
                     types[jtem] += 1
     sizes.sort()
+    #ignore particularly large files (for visual clarity)
     plt.hist(sizes[:-4], bins = 'auto')
     print(sizes[-4:])
     plt.title("Data File Sizes")
     plt.xlabel("Number of Phrases")
     plt.ylabel("Count")
     plt.show()
+    #plot types
     plt.bar([1,2,3,4,5], list(types.values()))
     plt.xticks([1,2,3,4,5], ('PIZZA','GREET','JOKE','WEATHER','TIME'))
     plt.title("Types of Phrases")
@@ -228,21 +227,8 @@ def EDA():
     plt.ylabel('Count')
     plt.show()
     
-def combine_stuff():
-    filenames = get_filenames()
-    for file in filenames:
-        filenames.remove(file)
-        data = read_file(file)
-        data = list(zip(*data))
-        while len(data[0]) < 60:
-            next_file = random.choice(filenames)
-            filenames.remove(next_file)
-        next_file = list(zip(*(read_file(next_file))))
-        data = [data[0] + list(next_file[0]), data[1] + list(next_file[1])]
 
-#our_data()    
-    
+#DB_data()        
 #EDA()    
 #compare_accuracy()
 #compare_sizes()
-    
