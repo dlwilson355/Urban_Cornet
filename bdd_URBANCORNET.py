@@ -1,10 +1,12 @@
 import sklearn
 import pickle
 import json
+import os
 
 filename = "input.txt"
 # this is temporary remove it
-filename = r"data/fb82860d-eabc-a8d0-b341-facdff0ac0f1"
+data_dir = "bad_labeled_data"
+files = [os.path.join(data_dir, file_path) for file_path in os.listdir(data_dir)]
 
 def load_brain():
     BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
@@ -55,12 +57,47 @@ def compute_errors(y_pred, y_real):
                 total_error += pred[i]
         y_err.append(total_error)
 
-    return total_error
+    mean_err = sum(y_err) / len(y_err)
+
+    q4 = sorted(y_err)[len(y_err) - len(y_err)//4:]
+    q4_mean = sum(q4) / len(q4)
+
+    return q4_mean
 
 # generate prediction probabilities
 model = load_brain()
-x, y = get_data_from_file(filename)
-print(x)
-print(y)
-print(compute_errors(model.predict_proba(x), y))
+prediction = ""
+correct = 0
+wrong = 0
+largest_good_error = 0
+smallest_bad_error = 1
+for filename in files:
+    x, y = get_data_from_file(filename)
+    error = compute_errors(model.predict_proba(x), y)
+    print(filename)
+    print(error)
 
+    # make prediction
+    if error > 0.7:
+        prediction = "bad"
+    else:
+        prediction = "good"
+    
+    # check if correct
+    if "BAD" in filename and prediction == "bad":
+        correct += 1
+    elif "BAD" not in filename and prediction == "good":
+        correct += 1
+    else:
+        print("Misidentified")
+        wrong += 1
+
+    # update the largest and smallest errors
+    if "BAD" in filename and error < smallest_bad_error:
+        smallest_bad_error = error
+    elif "BAD" not in filename and error > largest_good_error:
+        largest_good_error = error
+        
+print(f"\nThe largest good error was {largest_good_error} and the smallest bad error was {smallest_bad_error}.")
+print(f"Recommended cutoff is {(largest_good_error + smallest_bad_error) / 2}")
+print(f"Classified {correct} correctly and {wrong} wrong.")
