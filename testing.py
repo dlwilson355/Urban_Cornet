@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore", category=Warning)
 
 #first three functions read in files. This will have duplicate code
 def json_read(filename):
-    """read_file helper function"""
+    """This function reads in a json and returns the data in a list."""
     data = []
     f = open(filename)
     for line in f:
@@ -38,7 +38,7 @@ def json_read(filename):
     return data
 
 def csv_read(filename):
-    """read_file helper function"""
+    """This function reads in a csv and returns the data in a list."""
     data = []
     f = open(filename)
     for line in reader(f):
@@ -46,9 +46,10 @@ def csv_read(filename):
     return data
         
 def read_file(filename):
-    """read external data file"""
+    """This function uses the json_read and csv_read functions to read in the
+    data from both types of files and returns the data as a list"""
     f = open(filename)
-    if '{' in f.readline():
+    if f.readline().startswith('{'):
         data = json_read(filename)
     else:
         data = csv_read(filename)
@@ -58,6 +59,7 @@ def read_file(filename):
 
 
 #exact copy of get_model function from jarvis.py
+#further comments on this function in jarvis.py
 def get_model():
     """Returns the model used in Jarvis' brain."""
 
@@ -106,7 +108,7 @@ def test_brain(brain, percents, filename, fname):
         correct = 0
         wrong = 0        
         #percent of data which is correct
-#        print(39/len(data))
+        #print(39/len(data))
         try:
             for item in data:
                 if [item[1]] == brain.predict([item[0]]):
@@ -118,7 +120,7 @@ def test_brain(brain, percents, filename, fname):
             print(item)
             print(filename)
             print(fname)
-#        print(fname[-10:], ': ', correct,' correct', wrong, ' wrong.', round(correct/(wrong+ correct),2)*100, 'percent')        
+            #print(fname[-10:], ': ', correct,' correct', wrong, ' wrong.', round(correct/(wrong+ correct),2)*100, 'percent')        
         percents.append(correct/(wrong+correct))
     return percents
 
@@ -292,4 +294,3 @@ def EDA():
 #EDA()    
 compare_accuracy()
 #compare_sizes()
-    
