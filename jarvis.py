@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov  7 19:05:46 2019
+
+@author: sarafergus
+"""
+
 """
 Authors: Daniel Wilson, Sarah Fergus, Noah Stracqualursi
 This file contains the code for running a slack bot (Jarvis).
@@ -10,8 +18,10 @@ TODO: Experiment with different models and hyperparameters.
 
 
 import websocket
+import random
 import sqlite3
 import json
+import battleship 
 import requests
 import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -84,6 +94,11 @@ class Jarvis:
             self.train()
             self.action = 'testing'
             self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
+        
+        elif 'battleship time' in message_content:
+            self.play_battleship()
+            self.action = 'battleship'
+            self.send_message("Let's play! Set up your board")
 
         # check if Jarvis' brain should be loaded
         elif 'load brain' in message_content:
@@ -116,6 +131,9 @@ class Jarvis:
             self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`...\n"
                               "Write me something else and I'll try to figure it out.")
 
+        elif self.action == 'battleship' and 'help' in message_content:
+            self.send_message('TODO: put in steps on how to play')
+            
     def add_to_database(self, entities):
         """This function adds the passed entities to Jarvis' database."""
 
@@ -139,7 +157,6 @@ class Jarvis:
     def get_message_content(self, message):
         """
         Returns a string containing the text of a message typed by the user.
-
         The returned message will be converted to lowercase.
         Any unneeded punctuation will be removed.
         Returns an empty string if the message was sent by Jarvis.
@@ -171,6 +188,31 @@ class Jarvis:
         print("Experienced an error.\n"
               f"The error is: {error}.")
 
+    def play_battleship(self):
+        #TODO: make direction dictionary
+        b1, b2 = battleship.start_game()
+        #b1 = call function that tells the user to put their boats down
+        for item in boats:
+            go = False
+            while go == False:
+                b2, go = battleship.place_boat(item, [random.randint(0,3), random.randint(0,3)], b2, num2dir[random.randint(0,3)], boat2length, boat2num)
+        self.send_message("I am ready to win. Let's go. You go first.")
+        #call function play(self, b1, b2)
+    
+    def play(self, b1, b2):
+        won = False
+        winner = 'jarvis'
+        while won == False:
+            #location = do the thing where you ask the player
+            b2, won = battleship.fire(location, b2)
+            if won == True:
+                winner = 'player'
+                break
+            b1, won = battleship.fire([random.choice['a','b','c','d'], random.randint(0,3)],b1)
+        self.send_message(winner + 'wins! Would you like to play again?')
+        
+        
+        
     def train(self):
         """Calling this function makes Jarvis train his brain."""
 
