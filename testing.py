@@ -9,6 +9,7 @@ from csv import reader
 from sklearn.model_selection import GridSearchCV
 import json
 import matplotlib.pyplot as plt
+import pickle
 import sqlite3
 import statistics
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -20,9 +21,13 @@ import warnings
 
 PATTERN = './data/*-*'
 DATABASE_FILE_PATH = "jarvis.db"
+BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
 
 warnings.filterwarnings("ignore", category=Warning)
 
+#the first half of the functions likely have some duplicate code with jarvis.py
+
+#first three functions read in files. This will have duplicate code
 def json_read(filename):
     """read_file helper function"""
     data = []
@@ -49,6 +54,10 @@ def read_file(filename):
         data = csv_read(filename)
     return data
 
+
+
+
+#exact copy of get_model function from jarvis.py
 def get_model():
     """Returns the model used in Jarvis' brain."""
 
@@ -71,6 +80,8 @@ def get_model():
 
     return model
 
+
+#fits brain
 def fit_brain(data):
     """fit brain to data"""
     brain = get_model()
@@ -81,6 +92,9 @@ def fit_brain(data):
         brain = None
     return brain
 
+
+
+#tests brain
 def test_brain(brain, percents, filename, fname):
     """Test brain against data not used for training"""
     #avoid data leak
@@ -90,16 +104,27 @@ def test_brain(brain, percents, filename, fname):
     else:
         data = read_file(fname)
         correct = 0
-        wrong = 0
-        for item in data:
-            if [item[1]] == brain.predict([item[0]]):
-                correct +=1
-            else:
-                wrong +=1
+        wrong = 0        
+        #percent of data which is correct
+#        print(39/len(data))
+        try:
+            for item in data:
+                if [item[1]] == brain.predict([item[0]]):
+                    correct +=1
+                else:
+                    wrong +=1
+        except:
+            #working on some debugging
+            print(item)
+            print(filename)
+            print(fname)
 #        print(fname[-10:], ': ', correct,' correct', wrong, ' wrong.', round(correct/(wrong+ correct),2)*100, 'percent')        
         percents.append(correct/(wrong+correct))
     return percents
 
+
+
+#Get the information about our DB, essentially same as in jarvis.py
 def DB_data():
     """Get data from our database"""
     connection = sqlite3.connect(DATABASE_FILE_PATH)
@@ -118,6 +143,9 @@ def DB_data():
     print(len(x))
     return x, y
 
+
+
+#plotting function
 def plot_percents(percents):
     """Plot accuracy of various brains"""
     fig, ax = plt.subplots()
@@ -136,6 +164,7 @@ def plot_percents(percents):
     plt.show()
  
 
+#gets boolean accuracy of brain by average percent of each file
 def compare_accuracy():
     """Determine accuracy of brain"""
     percents = []
@@ -143,6 +172,8 @@ def compare_accuracy():
     db_accuracy = []
     i = 0
     for filename in get_filenames():
+        print(i)
+        i += 1
         data = read_file(filename)
         data = list(zip(*data))
         brain = fit_brain(data)
@@ -163,6 +194,9 @@ def compare_accuracy():
         db_accuracy = test_brain(db_brain, db_accuracy, ['none'], fname)
     print("Our Accuracy: ", sum(db_accuracy)/len(db_accuracy))
 
+
+
+#reads in from data folder
 def get_filenames():
     """Get external data files"""
     filenames = []
@@ -170,6 +204,9 @@ def get_filenames():
         filenames.append(filename)
     return filenames
 
+
+
+#create incrimentally larger traing sets, train brain, test brains accuracy. Plot results.
 def compare_sizes():
     """Grow size of training data and test for accuracy on each size"""
     data = DB_data()
@@ -198,7 +235,9 @@ def compare_sizes():
     plt.xlabel("Items in Training Data")
     plt.ylabel("Accuracy (percent as decimal)")
     plt.show()
-    
+
+
+#determine sizes and breakdowns of external data    
 def EDA():
     sizes = []
     types = {'PIZZA': 0, 'GREET':0,'JOKE':0,'WEATHER':0, 'TIME':0}
@@ -226,9 +265,31 @@ def EDA():
     plt.xlabel('Action')
     plt.ylabel('Count')
     plt.show()
+
+
+
+
+########################### calling functions #################################
     
+#check performance on bad data
+#percents = []  
+#brain = pickle.load(open(BRAIN_SAVE_FILE_PATH, 'rb'))
+#for filename in get_filenames():  
+#    percents = test_brain(brain, percents, filename, 'bad_file.txt')
+#print(sum(percents)/len(percents))
+
+#train on bad data
+#percents = []
+#data = read_file('bad_file.txt')
+#print(data)
+#brain = fit_brain(data)
+#for filename in get_filenames():
+#    percents = test_brain(brain, percents, 'bad_file.txt', filename)
+#print(sum(percents)/len(percents))
+
 
 #DB_data()        
 #EDA()    
-#compare_accuracy()
+compare_accuracy()
 #compare_sizes()
+    
