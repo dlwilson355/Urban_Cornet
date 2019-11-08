@@ -167,14 +167,17 @@ class Jarvis:
                         "channel": "CNPJBJZ29",
                         "text": "Sample Text",
                         "blocks": [
-                            "callback_id": "tender_button",
-                            "attachment_type": "default",
-                            "actions": [
                             {
-                                "name": "press",
-                                "text": "Press",
-                                "type": "button",
-                                "value": "pressed"
+                                "callback_id": "tender_button",
+                                "attachment_type": "default",
+                                "actions": [
+                                    {
+                                    "name": "press",
+                                    "text": "Press",
+                                    "type": "button",
+                                    "value": "pressed"
+                                    }
+                                ]
                             }
                         ]
                         }
