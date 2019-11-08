@@ -1,10 +1,12 @@
 import sklearn
 import pickle
 import json
+import os
 
 filename = "input.txt"
 # this is temporary remove it
-filename = r"data/fb82860d-eabc-a8d0-b341-facdff0ac0f1"
+data_dir = "bad_labeled_data"
+files = [os.path.join(data_dir, file_path) for file_path in os.listdir(data_dir)]
 
 def load_brain():
     BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
@@ -55,12 +57,12 @@ def compute_errors(y_pred, y_real):
                 total_error += pred[i]
         y_err.append(total_error)
 
-    return total_error
+    return sum(y_err) / len(y_err)
 
 # generate prediction probabilities
 model = load_brain()
-x, y = get_data_from_file(filename)
-print(x)
-print(y)
-print(compute_errors(model.predict_proba(x), y))
+for filename in files:
+    x, y = get_data_from_file(filename)
+    print(filename)
+    print(compute_errors(model.predict_proba(x), y))
 
