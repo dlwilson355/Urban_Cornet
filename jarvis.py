@@ -154,6 +154,38 @@ class Jarvis:
         json_payload = json.dumps(dict_payload)
         self.ws_connection.send(json_payload)
 
+    def send_buttons(self):
+        """Creates a button in the chat."""
+
+        dict_payload = {"text": "Confirmation",
+                        "attachments": [
+                            {
+                                "text": "Would you like to file upon this tile?",
+                                "fallback": "You are unable to choose a tile.",
+                                "callback_id": "tile_selection",
+                                "color": "#3AA3E3",
+                                "attachment_type": "default",
+                                "actions": [
+                                    {
+                                        "name": "fire",
+                                        "text": "Fire!",
+                                        "type": "button",
+                                        "value": "fire"
+                                    },
+                                    {
+                                        "name": "reject",
+                                        "text": "Hold you fire.",
+                                        "type": "button",
+                                        "value": "hold"
+                                    }
+                                ]
+                            }
+                        ]
+                        }
+
+        json_payload = json.dumps(dict_payload)
+        self.ws_connection.send(json_payload)
+
     def get_message_content(self, message):
         """
         Returns a string containing the text of a message typed by the user.
