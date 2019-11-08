@@ -100,6 +100,11 @@ class Jarvis:
             self.action = 'battleship'
             self.send_message("Let's play! Set up your board")
 
+        elif 'test buttons' in message_content:
+            self.send_message("Sending buttons test...")
+            self.send_buttons()
+            self.send_message("Sent!")
+
         # check if Jarvis' brain should be loaded
         elif 'load brain' in message_content:
             self.load_brain()
@@ -157,28 +162,19 @@ class Jarvis:
     def send_buttons(self):
         """Creates a button in the chat."""
 
-        dict_payload = {"text": "Confirmation",
-                        "attachments": [
+        dict_payload = {"id": 1,
+                        "type": "message",
+                        "channel": "CNPJBJZ29",
+                        "text": "Sample Text",
+                        "blocks": [
+                            "callback_id": "tender_button",
+                            "attachment_type": "default",
+                            "actions": [
                             {
-                                "text": "Would you like to file upon this tile?",
-                                "fallback": "You are unable to choose a tile.",
-                                "callback_id": "tile_selection",
-                                "color": "#3AA3E3",
-                                "attachment_type": "default",
-                                "actions": [
-                                    {
-                                        "name": "fire",
-                                        "text": "Fire!",
-                                        "type": "button",
-                                        "value": "fire"
-                                    },
-                                    {
-                                        "name": "reject",
-                                        "text": "Hold you fire.",
-                                        "type": "button",
-                                        "value": "hold"
-                                    }
-                                ]
+                                "name": "press",
+                                "text": "Press",
+                                "type": "button",
+                                "value": "pressed"
                             }
                         ]
                         }
