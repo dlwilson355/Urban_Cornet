@@ -23,12 +23,14 @@ import sqlite3
 import json
 import battleship 
 import requests
+import matplotlib.pyplot as plt
 import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
+from sklearn.metrics import confusion_matrix, classification_report
 import pickle
 import os
 from botsettings import API_TOKEN
@@ -243,7 +245,7 @@ class Jarvis:
             b1, won = battleship.fire([random.choice['a','b','c','d'], random.randint(0,3)],b1)
         self.send_message(winner + 'wins! Would you like to play again?')
 
-    def train_and_test(self, test_proportion = 0.2):
+    def train_and_test(self, test_proportion=0.2):
         """Calling this function makes Jarvis train his brain."""
 
         self.send_message("I'm training my brain with the data you've already given me...")
@@ -252,11 +254,17 @@ class Jarvis:
 
         # fit the classifier
         self.classifier.fit(x_train, y_train)
-        self.send_message(f"I got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
-        self.send_message(f"These were the parameters that worked best were {self.classifier.best_params_}.")
+        print(f"Got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
+        print(f"The parameters that worked best were {self.classifier.best_params_}.")
 
-        # test the brain
-        
+        # test the brain and save a confusion matrix
+        y_pred = self.classifier.predict(x_test)
+        cm = confusion_matrix(y_test, y_pred, labels=LEARNABLE_ACTIONS)
+        print("Here is the confusion matrix of the testing data.")
+        print(cm)
+        plt.matshow(cm)
+        plt.colorbar()
+        plt.savefig("test.pdf")
 
         # save the resulting brain
         self.save_brain()
@@ -284,6 +292,8 @@ class Jarvis:
             'clf__early_stopping': (True, False),
         }
 
+        params = {}
+
         model = GridSearchCV(pipeline, params, iid=False, cv=10, n_jobs=-1)
 
         return model
@@ -298,10 +308,6 @@ class Jarvis:
         x_db, y_db = self.get_database_data()
         x_files, y_files = self.get_data_from_files()
         all_x, all_y = x_db + x_files, y_db + y_files
-
-        # shuffle the data
-        random.shuffle(all_x)
-        random.shuffle(all_y)
 
         return train_test_split(all_x, all_y, test_size=testing_proportion)
 
