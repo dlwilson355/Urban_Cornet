@@ -81,63 +81,71 @@ class Jarvis:
     def on_message(self, message):
         """Controls a bot's response to receiving a message."""
 
-        message_content = self.get_message_content(message)
+        message_content, message_channel = self.get_message_info(message)
 
         # check if training should start
         if 'training time' in message_content:
             self.action = 'training'
             self.send_message("OK, I'm ready for training. "
-                              "What NAME should this ACTION be?")
+                              "What NAME should this ACTION be?",
+                              message_channel)
 
         # check if testing should start
         elif 'testing time' in message_content:
             self.train()
             self.action = 'testing'
-            self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
+            self.send_message("OK, I'm ready for testing. "
+                              "Write me something and I'll try to figure it out.",
+                              message_channel)
         
         elif 'battleship time' in message_content:
             self.play_battleship()
             self.action = 'battleship'
-            self.send_message("Let's play! Set up your board")
+            self.send_message("Let's play! Set up your board",
+                              message_channel)
 
         elif 'test buttons' in message_content:
-            self.send_message("Sending buttons test...")
+            self.send_message("Sending buttons test...", message_channel)
             self.send_buttons()
-            self.send_message("Sent!")
+            self.send_message("Sent!", message_channel)
 
         # check if Jarvis' brain should be loaded
         elif 'load brain' in message_content:
             self.load_brain()
             self.action = 'testing'
             self.send_message("I've loaded my brain and am ready for testing. "
-                              "Write me something and I'll try to figure it out.")
+                              "Write me something and I'll try to figure it out.",
+                              message_channel)
 
         # check if training or testing should stop
         elif 'done' in message_content:
             # if action is one of the labels, it means Jarvis is training
             if self.action in LEARNABLE_ACTIONS:
                 self.action = 'training'
-            self.send_message(f"OK, I'm finished {self.action}.")
+            self.send_message(f"OK, I'm finished {self.action}.", message_channel)
             self.action = 'done'
 
         # check if new message should be learned
         elif self.action in LEARNABLE_ACTIONS and message_content:
             self.add_to_database((message_content, self.action))
-            self.send_message("OK, I've got it! What else?")
+            self.send_message("OK, I've got it! What else?", message_channel)
 
         # check if new action should be learned
         elif self.action == 'training' and message_content:
             self.action = message_content.upper()
             self.send_message(f"OK, Let's call this action `{self.action}`. "
-                              "Now give me some training text!")
+                              "Now give me some training text!",
+                              message_channel)
 
         # check if a prediction should be made
         elif self.action == 'testing' and message_content:
             self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`...\n"
-                              "Write me something else and I'll try to figure it out.")
+                              "Write me something else and I'll try to figure it out.",
+                              message_channel)
 
         elif self.action == 'battleship' and 'help' in message_content:
-            self.send_message('TODO: put in steps on how to play')
+            self.send_message('TODO: put in steps on how to play',
+                              message_channel)
             
     def add_to_database(self, entities):
         """This function adds the passed entities to Jarvis' database."""
@@ -149,12 +157,12 @@ class Jarvis:
         # commit the changes
         self.db_connection.commit()
 
-    def send_message(self, text):
+    def send_message(self, text, channel='CNPJBJZ29'):
         """Sends a message with the specified text."""
 
         dict_payload = {"id": 1,
                         "type": "message",
-                        "channel": "CNPJBJZ29",
+                        "channel": channel,
                         "text": text}
         json_payload = json.dumps(dict_payload)
         self.ws_connection.send(json_payload)
@@ -162,32 +170,32 @@ class Jarvis:
     def send_buttons(self):
         """Creates a button in the chat."""
 
-        dict_payload = {"id": 1,
-                        "type": "message",
+        dict_payload = {
                         "channel": "CNPJBJZ29",
-                        "text": "Sample Text",
-                        "blocks": [
+                        "text": "Sent",
+                        "blocks": [{
+                        "type": "actions",
+                        "elements": [
                             {
-                                "callback_id": "tender_button",
-                                "attachment_type": "default",
-                                "actions": [
-                                    {
-                                    "name": "press",
-                                    "text": "Press",
-                                    "type": "button",
-                                    "value": "pressed"
-                                    }
-                                ]
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Reply to review",
+                                "emoji": "false"
+                                }
                             }
-                        ]
+                          ]
+                        }]
                         }
 
         json_payload = json.dumps(dict_payload)
         self.ws_connection.send(json_payload)
 
-    def get_message_content(self, message):
+    def get_message_info(self, message):
         """
-        Returns a string containing the text of a message typed by the user.
+        Returns a tuple.
+        The first index contains a string representing the message typed by the user.
+        The second index contains the ID of the channel over which it was sent.
         The returned message will be converted to lowercase.
         Any unneeded punctuation will be removed.
         Returns an empty string if the message was sent by Jarvis.
@@ -196,12 +204,13 @@ class Jarvis:
 
         punctuation_to_remove = "~!@#$%^&*()-+=,./<>"
         json_payload = json.loads(message)
-        if "client_msg_id" in json_payload.keys():
-            text = json_payload["text"].lower()
+        print(json_payload)
+        if 'client_msg_id' in json_payload.keys():
+            text = json_payload['text'].lower()
             for character in punctuation_to_remove:
                 text = text.replace(character, "")
-            return text
-        return ""
+            return text, json_payload['channel']
+        return "", ""
 
     def on_open(self):
         """Sends a message when opening a connection."""
