@@ -91,7 +91,7 @@ class Jarvis:
 
         # check if testing should start
         elif 'testing time' in message_content:
-            self.train()
+            self.train_and_test()
             self.action = 'testing'
             self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
         
@@ -242,26 +242,21 @@ class Jarvis:
                 break
             b1, won = battleship.fire([random.choice['a','b','c','d'], random.randint(0,3)],b1)
         self.send_message(winner + 'wins! Would you like to play again?')
-        
-        
-        
-    def train(self):
+
+    def train_and_test(self, test_proportion = 0.2):
         """Calling this function makes Jarvis train his brain."""
 
         self.send_message("I'm training my brain with the data you've already given me...")
 
-        # load and merge the data sources
-        x_db, y_db = self.get_database_data()
-        x_files, y_files = self.get_data_from_files()
-        all_x, all_y = x_db + x_files, y_db + y_files
-        #x_train, x_test, y_train, y_test = train_test_split(all_x, all_y, test_size=0.25)
+        x_train, x_test, y_train, y_test = self.get_training_and_testing_data()
 
         # fit the classifier
-        #scores = cross_validate(self.classifier, all_x, all_y, cv=10)
-        #self.send_message(f"I got a mean cross validation accuracy of {scores['test_score'].mean():.2f}.")
-        self.classifier.fit(all_x, all_y)
+        self.classifier.fit(x_train, y_train)
         self.send_message(f"I got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
         self.send_message(f"These were the parameters that worked best were {self.classifier.best_params_}.")
+
+        # test the brain
+        
 
         # save the resulting brain
         self.save_brain()
@@ -292,6 +287,23 @@ class Jarvis:
         model = GridSearchCV(pipeline, params, iid=False, cv=10, n_jobs=-1)
 
         return model
+
+    def get_training_and_testing_data(self, testing_proportion=0.2):
+        """
+        Returns a tuple contains lists of data.
+        The ordering is x_train, x_test, y_train, y_test.
+        """
+
+        # load and merge the data sources
+        x_db, y_db = self.get_database_data()
+        x_files, y_files = self.get_data_from_files()
+        all_x, all_y = x_db + x_files, y_db + y_files
+
+        # shuffle the data
+        random.shuffle(all_x)
+        random.shuffle(all_y)
+
+        return train_test_split(all_x, all_y, test_size=testing_proportion)
 
     def get_database_data(self):
         """Returns the data stored in Jarvis' database."""
