@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov  7 19:05:46 2019
-
-@author: sarafergus
-"""
-
 """
 Authors: Daniel Wilson, Sara Fergus, Noah Stracqualursi
 This file contains the code for running a slack bot (Jarvis).
@@ -20,12 +12,10 @@ import json
 import battleship
 import matplotlib.pyplot as plt
 import requests
-import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 import pickle
 import os
@@ -294,9 +284,9 @@ class Jarvis:
         return ""
 
     def on_open(self):
-        """Sends a message when opening a connection."""
+        """Prints an acknowledgement when opening a connection."""
 
-        self.send_message("Jarvis is online. ;)")
+        print("Jarvis is online. ;)")
 
     def on_close(self):
         """Called when the web socket is closed."""
