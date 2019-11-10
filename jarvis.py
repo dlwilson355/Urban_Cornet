@@ -250,23 +250,36 @@ class Jarvis:
 
         self.send_message("I'm training my brain with the data you've already given me...")
 
-        x_train, x_test, y_train, y_test = self.get_training_and_testing_data()
+        x_train, x_test, y_train, y_test = self.get_training_and_testing_data(test_proportion)
 
         # fit the classifier
         self.classifier.fit(x_train, y_train)
         print(f"Got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
         print(f"The parameters that worked best were {self.classifier.best_params_}.")
 
-        # test the brain and save a confusion matrix
+        # test the brain
+        FIG_SAVE_PATH = "confusion_matrix.png"
         y_pred = self.classifier.predict(x_test)
-        cm = confusion_matrix(y_test, y_pred, labels=LEARNABLE_ACTIONS)
+        print("Here is a classification report on the testing data...")
+        print(classification_report(y_test, y_pred))
+        cm = confusion_matrix(y_test, y_pred)
         print("Here is the confusion matrix of the testing data.")
         print(cm)
-        plt.matshow(cm)
-        plt.colorbar()
-        plt.savefig("test.pdf")
 
-        # save the resulting brain
+        # save a confusion matrix
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        cm_ax = ax.matshow(cm)
+        ax.set_xticklabels([""] + list(self.classifier.classes_))
+        ax.set_yticklabels([""] + list(self.classifier.classes_))
+        fig.colorbar(cm_ax)
+        plt.title("Confusion Matrix")
+        plt.xlabel("Predicted Label")
+        plt.ylabel("True Label")
+        fig.savefig(FIG_SAVE_PATH)
+        print(f"Saved confusion matrix to '{FIG_SAVE_PATH}'.")
+
+        # save the brain
         self.save_brain()
 
     def predict(self, text):
@@ -291,8 +304,6 @@ class Jarvis:
             'clf__penalty': ('none', 'l1', 'l2', 'elasticnet'),
             'clf__early_stopping': (True, False),
         }
-
-        params = {}
 
         model = GridSearchCV(pipeline, params, iid=False, cv=10, n_jobs=-1)
 
