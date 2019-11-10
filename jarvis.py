@@ -31,13 +31,8 @@ from botsettings import API_TOKEN
 
 '''
 TODO: commenting
-TODO: directions are not always working-- E and W at 10
-TODO: show your board
 TODO: something different when the whole ship is sunk
-TODO: go is not returning False when it should
-TODO: Fix indexing issues
 TODO: write out 'help' response
-TODO: create 'done' response in game
 TODO: learning?
 TODO: show how long each boat is when placing
 TODO: input validation
@@ -110,7 +105,7 @@ class Jarvis:
             self.action = 'training'
             self.send_message("OK, I'm ready for training. "
                               "What NAME should this ACTION be?")
-        # check if testing should start
+        # check if testing should startf
         elif 'testing time' in message_content:
             self.train()
             self.action = 'testing'
@@ -339,20 +334,37 @@ class Jarvis:
 
         self.send_message("I'm training my brain with the data you've already given me...")
 
-        # load and merge the data sources
-        x_db, y_db = self.get_database_data()
-        x_files, y_files = self.get_data_from_files()
-        all_x, all_y = x_db + x_files, y_db + y_files
-        #x_train, x_test, y_train, y_test = train_test_split(all_x, all_y, test_size=0.25)
+        # get the data
+        x_train, x_test, y_train, y_test = self.get_training_and_testing_data(test_proportion)
 
         # fit the classifier
-        #scores = cross_validate(self.classifier, all_x, all_y, cv=10)
-        #self.send_message(f"I got a mean cross validation accuracy of {scores['test_score'].mean():.2f}.")
-        self.classifier.fit(all_x, all_y)
-        self.send_message(f"I got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
-        self.send_message(f"These were the parameters that worked best were {self.classifier.best_params_}.")
+                self.classifier.fit(x_train, y_train)
+        print(f"Got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
+        print(f"The parameters that worked best were {self.classifier.best_params_}.")
 
-        # save the resulting brain
+        # test the brain
+        FIG_SAVE_PATH = "confusion_matrix.png"
+        y_pred = self.classifier.predict(x_test)
+        print("Here is a classification report on the testing data...")
+        print(classification_report(y_test, y_pred))
+        cm = confusion_matrix(y_test, y_pred)
+        print("Here is the confusion matrix of the testing data.")
+        print(cm)
+
+        # save a confusion matrix
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        cm_ax = ax.matshow(cm)
+        ax.set_xticklabels([""] + list(self.classifier.classes_))
+        ax.set_yticklabels([""] + list(self.classifier.classes_))
+        fig.colorbar(cm_ax)
+        plt.title("Confusion Matrix")
+        plt.xlabel("Predicted Label")
+        plt.ylabel("True Label")
+        fig.savefig(FIG_SAVE_PATH)
+        print(f"Saved confusion matrix to '{FIG_SAVE_PATH}'.")
+
+        # save the brain
         self.save_brain()
 
     def predict(self, text):
