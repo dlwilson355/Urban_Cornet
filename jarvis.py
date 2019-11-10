@@ -23,12 +23,10 @@ from botsettings import API_TOKEN
 
 '''
 TODO: commenting
-TODO: directions are not always working
-TODO: go is not returning False when it should
-TODO: Fix indexing issues
+TODO: something different when the whole ship is sunk
 TODO: write out 'help' response
-TODO: create 'done' response in game
 TODO: learning?
+TODO: show how long each boat is when placing
 TODO: input validation
 '''
 
@@ -47,8 +45,8 @@ class Jarvis:
         self.db_connection, self.db_cursor = self.initialize_database()
         self.ws_connection = self.initialize_slack_connection()
         self.play_game = False
-        self.boats = {'battleship' : 0, 'submarine': 0}
-        self.bow = ''
+        self.boats = {'battleship': 0, 'carrier': 0, 'cruiser': 0, 'submarine': 0, 'destroyer':0}
+        self.bow = 'a3'
         self.current_boat = ''
         self.direction = ''
         self.confirm = False
@@ -100,13 +98,34 @@ class Jarvis:
             self.action = 'training'
             self.send_message("OK, I'm ready for training. "
                               "What NAME should this ACTION be?")
-        # check if testing should start
+        # check if testing should startf
         elif 'testing time' in message_content:
             self.train_and_test()
             self.action = 'testing'
             self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
-        
+                
+        # check if Jarvis' brain should be loaded
+        elif 'load brain' in message_content:
+            self.load_brain()
+            self.action = 'testing'
+            self.send_message("I've loaded my brain and am ready for testing. "
+                              "Write me something and I'll try to figure it out.")
+            
+        # check if training or testing should stop
+        elif 'done' in message_content:
+            #if jarvis is playing battleship, stop playing
+            if self.play_game == True:
+                self.send_message("Okay, let's play again soon!")
+                self.play_game = False
+            else:
+                # if action is one of the labels, it means Jarvis is training
+                if self.action in LEARNABLE_ACTIONS:
+                    self.action = 'training'
+                self.send_message(f"OK, I'm finished {self.action}.")
+                self.action = 'done'
+                
         elif 'battleship time' in message_content:
+            self.show_board(self.jarvis_board)
             self.play_game = True
             self.action = 'place_boat'
             self.send_message("Let's play!")
@@ -118,23 +137,26 @@ class Jarvis:
                    self.send_message("Place your " +item + ". Type in your bow coordinate (ex. A3). I promise I won't cheat ;)")
                    self.action = 'place_boat'
                    break
-                if 0 not in self.boats.values():
-                   self.action = 'play'
-                   self.send_message('Time to play. I hope you are ready to lose.')
-                   self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
-                   self.show_board(guess_board)
+            if 0 not in self.boats.values():
+               self.action = 'play'
+               self.send_message('Time to play. I hope you are ready to lose.')
+               self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
+               self.show_board(self.guess_board)
                    
         elif self.play_game == True and self.action == 'start_over':
-             for item in self.boats.keys():
+            #check on this
+            dont_stop = False
+            for item in self.boats.keys():
                 if self.boats[item] == 0:
                    self.boats[item] = 1
                    self.action = 'place_boat'
+                   dont_stop = True
                    break
-                if 0 not in self.boats.values():
-                   self.action = 'play'
-                   self.send_message('Time to play. I hope you are ready to lose.')
-                   self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
-                   self.show_board(guess_board) 
+            if 0 not in self.boats.values() and dont_stop == False:
+               self.action = 'play'
+               self.send_message('Time to play. I hope you are ready to lose.')
+               self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
+               self.show_board(self.guess_board) 
                    
         elif self.play_game== True and self.action == 'place_boat' and 'message' in message:
             self.bow = message_content
@@ -156,31 +178,11 @@ class Jarvis:
                         if self.boats[boat] == 0:
                             self.current_boat = boat
                             self.send_message("Alright. Place your " +self.current_boat + ". Type in your bow coordinate (ex. A3).")
+                            break
             else:
                 self.boats[self.current_boat] = 0
                 self.send_message("Alright. Place your " +self.current_boat + ". Type in your bow coordinate (ex. A3).")
             self.action = 'start_over'
-                
-        # check if Jarvis' brain should be loaded
-        elif 'load brain' in message_content:
-            self.load_brain()
-            self.action = 'testing'
-            self.send_message("I've loaded my brain and am ready for testing. "
-                              "Write me something and I'll try to figure it out.")
-            
-        # check if training or testing should stop
-        elif 'done' in message_content:
-            #if jarvis is playing battleship, stop playing
-            if self.play_game == True:
-                self.send_message("Okay, let's play again soon!")
-                self.play_game = False
-            else:
-                # if action is one of the labels, it means Jarvis is training
-                if self.action in LEARNABLE_ACTIONS:
-                    self.action = 'training'
-                self.send_message(f"OK, I'm finished {self.action}.")
-                self.action = 'done'
-
         # check if new message should be learned
         elif self.action in LEARNABLE_ACTIONS and message_content:
             self.add_to_database((message_content, self.action))
@@ -201,31 +203,31 @@ class Jarvis:
             self.send_message('TODO: put in steps on how to play')
         
         elif self.play_game == True and self.action == 'play':
-            cont = "Already fired there, please choose new coordinates."
-            while cont == "Already fired there, please choose new coordinates.":
-                result = battleship.fire(message_content,self.guess_board , self.jarvis_board)
+            result = battleship.fire(message_content,self.guess_board , self.jarvis_board)
+            if result[0] == 'Winner!':
+                self.send_message("You win! Congratulations! Type 'battleship time' to play again.")
+                self.play_game = False
+            if self.play_game == True and result[0]!= "Already fired there, please choose new coordinates.":
                 self.guess_board = result[1]
                 self.send_message(result[0])
-                #determine whether someone has won
+                self.send_message('Guess Board:')
                 self.show_board(result[1])
                 self.jarvis_board = result[2]
-                cont = result[0]
-            cont = "Already fired there, please choose new coordinates."
-            self.send_message('My turn')
-            #make it so that these results change point of view
-            while cont ==  "Already fired there, please choose new coordinates.":  
-                #change so that they cannot guess less than 1
-                guess= random.choice(['a','b','c','d'])+ str(random.randint(0,3))
-                result = battleship.fire(guess, None , self.player_board)
-                cont = result[0]
-            self.send_message('My guess is ' + guess)
-            self.send_message(result[0])
-            #determine whether someone has won
-            self.player_board = result[3]
-            self.send_message('Here your board with my guess')
-            self.show_board(self.player_board)
-            #if no one has won
-            self.send_message('Your turn again. Where would you like to fire?')
+                guess= random.choice(['a','b','c','d', 'e','f','g','h','i','j'])+ str(random.randint(0,9))
+                cont = "Already fired there, please choose new coordinates."
+                while cont == "Already fired there, please choose new coordinates.":
+                    result = battleship.fire(guess, None , self.player_board)
+                    cont = result[0]
+                self.send_message('My turn. My guess is ' + guess)
+                if result[0] == 'Winner!':
+                        self.send_message("I win! Type 'battleship time' to play again.")
+                        self.play_game = False
+                if self.play_game == True:
+                    self.send_message(result[0])
+                    self.player_board = result[2]
+                    self.send_message('Here your board with my guess')
+                    self.show_board(self.player_board)
+                    self.send_message('Your turn again. Where would you like to fire?')
             
             
             
@@ -252,12 +254,13 @@ class Jarvis:
         self.ws_connection.send(json_payload)
     
     def create_board(self):            
-        boat2length = {'battleship': 2, 'submarine' :3}
-        boat2num = {'battleship': 'b', 'submarine':'s'}
+        boat2length= {'battleship': 4, 'carrier': 5, 'cruiser': 3, 'submarine': 3, 'destroyer':2}
+        boat2num = {'battleship': 'b', 'carrier': 'c', 'cruiser': 'u', 'submarine': 's', 'destroyer':'d'}
         self.player_board, go = battleship.place_boat(self.current_boat, self.bow, self.direction, self.player_board, boat2length, boat2num)
         if go == False:
             self.send_message('You cannot place your boat there. Try again')
-            self.boats[self.current_boat] = 0                
+            self.boats[self.current_boat] = 0    
+            self.show_board(self.player_board)            
         else:
             self.show_board(self.player_board)
         self.action = 'start_over'
@@ -300,25 +303,25 @@ class Jarvis:
               f"The error is: {error}.")      
         
     def create_jarvis_board(self):
-        boat2length = {'battleship': 2, 'submarine' :3}
-        boat2num = {'battleship': 'b', 'submarine':'s'}
+        boat2length= {'battleship': 4, 'carrier': 5, 'cruiser': 3, 'submarine': 3, 'destroyer':2}
+        boat2num = {'battleship': 'b', 'carrier': 'c', 'cruiser': 'u', 'submarine': 's', 'destroyer':'d'}
         for item in self.boats.keys():
             go = False
             while go == False:
                 #this could be changed so that Jarvis can learn and get better. For now, it is entirely random.
-                self.jarvis_board, go = battleship.place_boat(item, random.choice(['a','b','c','d'])+ str(random.randint(0,3)), random.choice(['n','s','e','w']), self.jarvis_board, boat2length, boat2num)
+                self.jarvis_board, go = battleship.place_boat(item, random.choice(['a','b','c','d', 'e','f','g','h','i','j'])+ str(random.randint(1,10)), random.choice(['n','s','e','w']), self.jarvis_board, boat2length, boat2num)
         
-    def play(self, b1, b2):
-        won = False
-        winner = 'jarvis'
-        while won == False:
-            #location = do the thing where you ask the player
-            b2, won = battleship.fire(location, b2)
-            if won == True:
-                winner = 'player'
-                break
-            b1, won = battleship.fire([random.choice['a','b','c','d'], random.randint(0,3)],b1)
-        self.send_message(winner + 'wins! Would you like to play again?')
+#    def play(self, b1, b2):
+#        won = False
+#        winner = 'jarvis'
+#        while won == False:
+#            #location = do the thing where you ask the player
+#            b2, won = battleship.fire(location, b2)
+#            if won == True:
+#                winner = 'player'
+#                break
+#            b1, won = battleship.fire([random.choice['a','b','c','d', 'e','f','g','h','i','j'], random.randint(0,9)],b1)
+#        self.send_message(winner + 'wins! Would you like to play again?')
         
         
         
@@ -330,7 +333,7 @@ class Jarvis:
         x_train, x_test, y_train, y_test = self.get_training_and_testing_data(test_proportion)
 
         # fit the classifier
-        self.classifier.fit(x_train, y_train)
+                self.classifier.fit(x_train, y_train)
         print(f"Got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
         print(f"The parameters that worked best were {self.classifier.best_params_}.")
 
@@ -444,8 +447,8 @@ class Jarvis:
         return x, y
     
     def show_board(self, board):
-        b = '*    1     2    3    4\n'
-        letters = ['A    ', 'B    ', 'C    ', 'D    ']
+        b = '*    1     2    3    4    5    6    7    8   9    10\n'
+        letters = ['A    ', 'B    ', 'C    ', 'D    ', 'E    ','F    ','G    ','H    ','I     ','J     ']
         for line in board:
             b = b + letters[0]
             letters.remove(letters[0])
