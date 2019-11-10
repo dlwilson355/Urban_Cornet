@@ -52,6 +52,7 @@ LEARNABLE_ACTIONS = ['TIME', 'PIZZA', 'GREET', 'WEATHER', 'JOKE']
 class Jarvis:
     def __init__(self):
         self.action = ""
+        self.channel = ""
         self.classifier = self.get_model()
         self.db_connection, self.db_cursor = self.initialize_database()
         self.ws_connection = self.initialize_slack_connection()
@@ -255,7 +256,7 @@ class Jarvis:
 
         dict_payload = {"id": 1,
                         "type": "message",
-                        "channel": "CNPJBJZ29",
+                        "channel": self.channel,
                         "text": text}
         json_payload = json.dumps(dict_payload)
         self.ws_connection.send(json_payload)
@@ -278,6 +279,8 @@ class Jarvis:
         Any unneeded punctuation will be removed.
         Returns an empty string if the message was sent by Jarvis.
         This prevents Jarvis from responding to his own messages.
+        This function also updates self.channel to indicate the most recent
+        channel a message was sent over.
         """
 
         punctuation_to_remove = "~!@#$%^&*()-+=,./<>"
@@ -286,6 +289,7 @@ class Jarvis:
             text = json_payload["text"].lower()
             for character in punctuation_to_remove:
                 text = text.replace(character, "")
+            self.channel = json_payload["channel"]
             return text
         return ""
 
