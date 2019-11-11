@@ -22,15 +22,6 @@ import pickle
 import os
 from botsettings import API_TOKEN
 
-'''
-TODO: commenting
-TODO: something different when the whole ship is sunk
-TODO: write out 'help' response
-TODO: learning?
-TODO: show how long each boat is when placing
-TODO: input validation
-'''
-
 # some global settings controlling Jarvis' behavior
 BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
 DATA_DIRECTORY = "data"
@@ -125,8 +116,7 @@ class Jarvis:
                 self.send_message(f"OK, I'm finished {self.action}.")
                 self.action = 'done'
                 
-        elif 'battleship time' in message_content:
-            self.show_board(self.jarvis_board)
+        elif 'battleship time' in message_content and 'help' not in message_content and 'reference' not in message_content:
             self.play_game = True
             self.action = 'place_boat'
             self.send_message("Let's play!")
@@ -144,7 +134,7 @@ class Jarvis:
                self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
                self.show_board(self.guess_board)
                    
-        elif self.play_game == True and self.action == 'start_over':
+        elif self.play_game == True and self.action == 'start_over'  and 'help' not in message_content and 'reference' not in message_content:
             #check on this
             dont_stop = False
             for item in self.boats.keys():
@@ -159,18 +149,18 @@ class Jarvis:
                self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
                self.show_board(self.guess_board) 
                    
-        elif self.play_game== True and self.action == 'place_boat' and 'message' in message:
+        elif self.play_game== True and self.action == 'place_boat' and 'message' in message  and 'help' not in message_content and 'reference' not in message_content:
             self.bow = message_content
             self.send_message("Sweet. In what cardinal direction (N, S, W, E) is your boat traveling?")
             self.action = 'direction'
 
-        elif self.play_game == True and self.action == 'direction' and 'message' in message:
+        elif self.play_game == True and self.action == 'direction' and 'message' in message  and 'help' not in message_content and 'reference' not in message_content:
             letter2dir = {'N': 'north','n': 'north', 'S': 'south', 'E': 'east', 'W':'west', 's': 'south', 'e': 'east', 'w':'west'}
             self.direction = message_content
             self.send_message("You would like your "+ self.current_boat+ " at "+ self.bow +  ' facing '+ letter2dir[self.direction] + ". Confirm? (Y/N)")
             self.action = 'confirm'
             
-        elif self.play_game == True and self.action == 'confirm' and 'message' in message:
+        elif self.play_game == True and self.action == 'confirm' and 'message' in message  and 'help' not in message_content and 'reference' not in message_content:
             if message_content == 'y':
                 self.send_message("Great! Here is your current board:")
                 self.create_board()
@@ -185,6 +175,7 @@ class Jarvis:
                 self.send_message("Alright. Place your " +self.current_boat + ". Type in your bow coordinate (ex. A3).")
             self.action = 'start_over'
         # check if new message should be learned
+        
         elif self.action in LEARNABLE_ACTIONS and message_content:
             self.add_to_database((message_content, self.action))
             self.send_message("OK, I've got it! What else?")
@@ -200,10 +191,13 @@ class Jarvis:
             self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`...\n"
                               "Write me something else and I'll try to figure it out.")
 
-        elif self.play_game == True and 'help' in message_content:
-            self.send_message('TODO: put in steps on how to play')
+        elif self.play_game == True and 'help' in message_content and 'reference' not in message_content:
+            self.send_message('Welcome to Battleship! How to Play:\n\n (1) Place your ships. You have 5 ships of different sizes, and you will place the bow (front), and the specify the cardinal direction in which the boat is traveling\n (2) Play the game! You and Jarvis will each take turns "firing" in an attempt to sink all of the other player\'s ships. Whoever sinks all ships first wins!\n\nTo exit the game, you can type \'done\' at any time. For a reference sheet of boats and sizes, type \'reference\' ')
         
-        elif self.play_game == True and self.action == 'play':
+        elif self.play_game == True and 'reference' in message_content and 'help' not in message_content:
+            self.send_message('BATTLESHIP, length: 4, identifier: b\n CARRIER, length: 5, identifier:c\n CRUISER, length: 3, identifier: u\n SUBMARINE, length: 3, identifier: s\n DESTORYER,  length: 2, identifier: d')
+         
+        elif self.play_game == True and self.action == 'play'  and 'help' not in message_content and 'reference' not in message_content:
             result = battleship.fire(message_content,self.guess_board , self.jarvis_board)
             if result[0] == 'Winner!':
                 self.send_message("You win! Congratulations! Type 'battleship time' to play again.")
