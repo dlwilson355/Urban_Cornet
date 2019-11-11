@@ -1,17 +1,18 @@
-import sklearn
 import pickle
 import json
 import os
 
+BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
+DATA_DIR = "bad_labeled_data"
 
-filename = "input.txt"
-# this is temporary remove it
-data_dir = "bad_labeled_data"
-files = [os.path.join(data_dir, file_path) for file_path in os.listdir(data_dir)]
+
+def load_files():
+    files = [os.path.join(DATA_DIR, file_path) for file_path in os.listdir(DATA_DIR)]
+    return files
 
 
 def load_brain():
-    BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
+
     classifier = pickle.load(open(BRAIN_SAVE_FILE_PATH, 'rb'))
     return classifier
 
@@ -45,7 +46,7 @@ def get_data_from_file(file_path):
     return x, y
 
 
-def compute_errors(y_pred, y_real):
+def compute_errors(y_pred, y_real, proportion=4):
     # find a better solution
     order = ['GREET', 'JOKE', 'PIZZA', 'TIME', 'WEATHER']
 
@@ -61,45 +62,57 @@ def compute_errors(y_pred, y_real):
 
     mean_err = sum(y_err) / len(y_err)
 
-    q4 = sorted(y_err)[len(y_err) - len(y_err)//4:]
+    q4 = sorted(y_err)[len(y_err) - len(y_err)//proportion:]
     q4_mean = sum(q4) / len(q4)
 
     return q4_mean
 
 # generate prediction probabilities
+files = load_files()
 model = load_brain()
-prediction = ""
-correct = 0
-wrong = 0
-largest_good_error = 0
-smallest_bad_error = 1
-for filename in files:
-    x, y = get_data_from_file(filename)
-    error = compute_errors(model.predict_proba(x), y)
-    print(filename)
-    print(error)
+proportions_to_test = [1, 2, 3, 4, 5, 6, 7, 8]
+margins = []
 
-    # make prediction
-    if error > 0.7:
-        prediction = "bad"
-    else:
-        prediction = "good"
-    
-    # check if correct
-    if "BAD" in filename and prediction == "bad":
-        correct += 1
-    elif "BAD" not in filename and prediction == "good":
-        correct += 1
-    else:
-        print("Misidentified")
-        wrong += 1
+for proportion in proportions_to_test:
+    prediction = ""
+    correct = 0
+    wrong = 0
+    largest_good_error = 0
+    smallest_bad_error = 1
 
-    # update the largest and smallest errors
-    if "BAD" in filename and error < smallest_bad_error:
-        smallest_bad_error = error
-    elif "BAD" not in filename and error > largest_good_error:
-        largest_good_error = error
-        
-print(f"\nThe largest good error was {largest_good_error} and the smallest bad error was {smallest_bad_error}.")
-print(f"Recommended cutoff is {(largest_good_error + smallest_bad_error) / 2}")
-print(f"Classified {correct} correctly and {wrong} wrong.")
+    for filename in files:
+        x, y = get_data_from_file(filename)
+        error = compute_errors(model.predict_proba(x), y, proportion)
+        # print(filename)
+        # print(error)
+
+        # make prediction
+        if error > 0.7:
+            prediction = "bad"
+        else:
+            prediction = "good"
+
+        # check if correct
+        if "BAD" in filename and prediction == "bad":
+            correct += 1
+        elif "BAD" not in filename and prediction == "good":
+            correct += 1
+        else:
+            # print("Misidentified")
+            wrong += 1
+
+        # update the largest and smallest errors
+        if "BAD" in filename and error < smallest_bad_error:
+            smallest_bad_error = error
+        elif "BAD" not in filename and error > largest_good_error:
+            largest_good_error = error
+
+    margins.append(smallest_bad_error - largest_good_error)
+
+    print(f"\nResults with proportion {proportion} are as follows.")
+    print(f"The largest good error was {largest_good_error} and the smallest bad error was {smallest_bad_error}.")
+    print(f"Recommended cutoff is {(largest_good_error + smallest_bad_error) / 2}")
+    print(f"Classified {correct} correctly and {wrong} wrong.")
+
+print(f"The margins were {margins} for proportions {proportions_to_test}.")
+print(f"The recommended proportion is {proportions_to_test[margins.index(max(margins))]}.")

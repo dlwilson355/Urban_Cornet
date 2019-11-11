@@ -58,7 +58,7 @@ def compute_errors(y_pred, y_real):
 
     mean_err = sum(y_err) / len(y_err)
 
-    q4 = sorted(y_err)[len(y_err) - len(y_err)//4:]
+    q4 = sorted(y_err)[len(y_err) - len(y_err)//5:]
     q4_mean = sum(q4) / len(q4)
 
     return q4_mean
@@ -69,7 +69,7 @@ x, y = get_data_from_file(filename)
 error = compute_errors(model.predict_proba(x), y)
 
 # make prediction
-if error < 0.7:
+if error < 0.7814674354224296:
     print("good")
 else:
     print("bad")

@@ -11,6 +11,7 @@ import sqlite3
 import json
 import battleship
 import matplotlib.pyplot as plt
+import numpy as np
 import requests
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import SGDClassifier
@@ -343,7 +344,7 @@ class Jarvis:
         # save a confusion matrix
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        cm_ax = ax.matshow(cm)
+        cm_ax = ax.matshow(np.log(cm + .01))  # we add .01 to avoid dividing by 0 error
         ax.set_xticklabels([""] + list(self.classifier.classes_))
         ax.set_yticklabels([""] + list(self.classifier.classes_))
         fig.colorbar(cm_ax)
