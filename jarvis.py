@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov  7 19:05:46 2019
-
-@author: sarafergus
-"""
-
 """
 Authors: Daniel Wilson, Sara Fergus, Noah Stracqualursi
 This file contains the code for running a slack bot (Jarvis).
@@ -17,26 +9,17 @@ import websocket
 import random
 import sqlite3
 import json
-import battleship 
+import battleship
+import matplotlib.pyplot as plt
 import requests
-import sklearn
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import confusion_matrix, classification_report
 import pickle
 import os
 from botsettings import API_TOKEN
-
-'''
-TODO: commenting
-TODO: something different when the whole ship is sunk
-TODO: write out 'help' response
-TODO: learning?
-TODO: show how long each boat is when placing
-TODO: input validation
-'''
 
 # some global settings controlling Jarvis' behavior
 BRAIN_SAVE_FILE_PATH = "jarvis_URBANCORNET.pkl"
@@ -48,6 +31,7 @@ LEARNABLE_ACTIONS = ['TIME', 'PIZZA', 'GREET', 'WEATHER', 'JOKE']
 class Jarvis:
     def __init__(self):
         self.action = ""
+        self.channel = ""
         self.classifier = self.get_model()
         self.db_connection, self.db_cursor = self.initialize_database()
         self.ws_connection = self.initialize_slack_connection()
@@ -107,7 +91,7 @@ class Jarvis:
                               "What NAME should this ACTION be?")
         # check if testing should startf
         elif 'testing time' in message_content:
-            self.train()
+            self.train_and_test()
             self.action = 'testing'
             self.send_message("OK, I'm ready for testing. Write me something and I'll try to figure it out.")
                 
@@ -131,8 +115,7 @@ class Jarvis:
                 self.send_message(f"OK, I'm finished {self.action}.")
                 self.action = 'done'
                 
-        elif 'battleship time' in message_content:
-            self.show_board(self.jarvis_board)
+        elif 'battleship time' in message_content and 'help' not in message_content and 'reference' not in message_content:
             self.play_game = True
             self.action = 'place_boat'
             self.send_message("Let's play!")
@@ -150,7 +133,7 @@ class Jarvis:
                self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
                self.show_board(self.guess_board)
                    
-        elif self.play_game == True and self.action == 'start_over':
+        elif self.play_game == True and self.action == 'start_over'  and 'help' not in message_content and 'reference' not in message_content:
             #check on this
             dont_stop = False
             for item in self.boats.keys():
@@ -165,18 +148,18 @@ class Jarvis:
                self.send_message('You go first. Here is your guess board. Where would you like to shoot?')
                self.show_board(self.guess_board) 
                    
-        elif self.play_game== True and self.action == 'place_boat' and 'message' in message:
+        elif self.play_game== True and self.action == 'place_boat' and 'message' in message  and 'help' not in message_content and 'reference' not in message_content:
             self.bow = message_content
             self.send_message("Sweet. In what cardinal direction (N, S, W, E) is your boat traveling?")
             self.action = 'direction'
 
-        elif self.play_game == True and self.action == 'direction' and 'message' in message:
+        elif self.play_game == True and self.action == 'direction' and 'message' in message  and 'help' not in message_content and 'reference' not in message_content:
             letter2dir = {'N': 'north','n': 'north', 'S': 'south', 'E': 'east', 'W':'west', 's': 'south', 'e': 'east', 'w':'west'}
             self.direction = message_content
             self.send_message("You would like your "+ self.current_boat+ " at "+ self.bow +  ' facing '+ letter2dir[self.direction] + ". Confirm? (Y/N)")
             self.action = 'confirm'
             
-        elif self.play_game == True and self.action == 'confirm' and 'message' in message:
+        elif self.play_game == True and self.action == 'confirm' and 'message' in message  and 'help' not in message_content and 'reference' not in message_content:
             if message_content == 'y':
                 self.send_message("Great! Here is your current board:")
                 self.create_board()
@@ -191,6 +174,7 @@ class Jarvis:
                 self.send_message("Alright. Place your " +self.current_boat + ". Type in your bow coordinate (ex. A3).")
             self.action = 'start_over'
         # check if new message should be learned
+        
         elif self.action in LEARNABLE_ACTIONS and message_content:
             self.add_to_database((message_content, self.action))
             self.send_message("OK, I've got it! What else?")
@@ -206,10 +190,13 @@ class Jarvis:
             self.send_message(f"OK, I think the action you mean is `{self.predict(message_content)}`...\n"
                               "Write me something else and I'll try to figure it out.")
 
-        elif self.play_game == True and 'help' in message_content:
-            self.send_message('TODO: put in steps on how to play')
+        elif self.play_game == True and 'help' in message_content and 'reference' not in message_content:
+            self.send_message('Welcome to Battleship! How to Play:\n\n (1) Place your ships. You have 5 ships of different sizes, and you will place the bow (front), and the specify the cardinal direction in which the boat is traveling\n (2) Play the game! You and Jarvis will each take turns "firing" in an attempt to sink all of the other player\'s ships. Whoever sinks all ships first wins!\n\nTo exit the game, you can type \'done\' at any time. For a reference sheet of boats and sizes, type \'reference\' ')
         
-        elif self.play_game == True and self.action == 'play':
+        elif self.play_game == True and 'reference' in message_content and 'help' not in message_content:
+            self.send_message('BATTLESHIP, length: 4, identifier: b\n CARRIER, length: 5, identifier:c\n CRUISER, length: 3, identifier: u\n SUBMARINE, length: 3, identifier: s\n DESTORYER,  length: 2, identifier: d')
+         
+        elif self.play_game == True and self.action == 'play'  and 'help' not in message_content and 'reference' not in message_content:
             result = battleship.fire(message_content,self.guess_board , self.jarvis_board)
             if result[0] == 'Winner!':
                 self.send_message("You win! Congratulations! Type 'battleship time' to play again.")
@@ -255,7 +242,7 @@ class Jarvis:
 
         dict_payload = {"id": 1,
                         "type": "message",
-                        "channel": "CNPJBJZ29",
+                        "channel": self.channel,
                         "text": text}
         json_payload = json.dumps(dict_payload)
         self.ws_connection.send(json_payload)
@@ -279,6 +266,8 @@ class Jarvis:
         Any unneeded punctuation will be removed.
         Returns an empty string if the message was sent by Jarvis.
         This prevents Jarvis from responding to his own messages.
+        This function also updates self.channel to indicate the most recent
+        channel a message was sent over.
         """
 
         punctuation_to_remove = "~!@#$%^&*()-+=,./<>"
@@ -287,13 +276,14 @@ class Jarvis:
             text = json_payload["text"].lower()
             for character in punctuation_to_remove:
                 text = text.replace(character, "")
+            self.channel = json_payload["channel"]
             return text
         return ""
 
     def on_open(self):
-        """Sends a message when opening a connection."""
+        """Prints an acknowledgement when opening a connection."""
 
-        self.send_message("Jarvis is online. ;)")
+        print("Jarvis is online. ;)")
 
     def on_close(self):
         """Called when the web socket is closed."""
@@ -329,16 +319,15 @@ class Jarvis:
         
         
         
-    def train(self):
+    def train_and_test(self, test_proportion=0.2):
         """Calling this function makes Jarvis train his brain."""
 
         self.send_message("I'm training my brain with the data you've already given me...")
 
-        # get the data
         x_train, x_test, y_train, y_test = self.get_training_and_testing_data(test_proportion)
 
         # fit the classifier
-                self.classifier.fit(x_train, y_train)
+        self.classifier.fit(x_train, y_train)
         print(f"Got a mean cross validation accuracy of {self.classifier.best_score_:.4f}.")
         print(f"The parameters that worked best were {self.classifier.best_params_}.")
 
@@ -393,6 +382,19 @@ class Jarvis:
         model = GridSearchCV(pipeline, params, iid=False, cv=10, n_jobs=-1)
 
         return model
+
+    def get_training_and_testing_data(self, testing_proportion=0.2):
+        """
+        Returns a tuple contains lists of data.
+        The ordering is x_train, x_test, y_train, y_test.
+        """
+
+        # load and merge the data sources
+        x_db, y_db = self.get_database_data()
+        x_files, y_files = self.get_data_from_files()
+        all_x, all_y = x_db + x_files, y_db + y_files
+
+        return train_test_split(all_x, all_y, test_size=testing_proportion)
 
     def get_database_data(self):
         """Returns the data stored in Jarvis' database."""
