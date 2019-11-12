@@ -42,21 +42,17 @@ def get_data_from_file(file_path):
     return x, y
 
 
-def compute_errors(y_pred, y_real):
-    # find a better solution
-    order = ['GREET', 'JOKE', 'PIZZA', 'TIME', 'WEATHER']
-
+def compute_errors(y_pred, y_real, classes):
+    classes = list(classes)
     y_err = []
     for pred, real in zip(y_pred, y_real):
-        non_error_index = order.index(real)
+        non_error_index = classes.index(real)
 
         total_error = 0
         for i in range(pred.shape[0]):
             if not i == non_error_index:
                 total_error += pred[i]
         y_err.append(total_error)
-
-    mean_err = sum(y_err) / len(y_err)
 
     q4 = sorted(y_err)[len(y_err) - len(y_err)//5:]
     q4_mean = sum(q4) / len(q4)
@@ -66,7 +62,7 @@ def compute_errors(y_pred, y_real):
 # perform computations
 model = load_brain()
 x, y = get_data_from_file(filename)
-error = compute_errors(model.predict_proba(x), y)
+error = compute_errors(model.predict_proba(x), y, model.classes_)
 
 # make prediction
 if error < 0.7814674354224296:
