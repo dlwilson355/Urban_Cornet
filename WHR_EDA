@@ -7,6 +7,7 @@ Created on Thu Nov 21 20:25:27 2019
 """
 import matplotlib.pyplot as plt
 import scipy.stats
+import numpy as np
 
 i = 0
 info_dict = {}
@@ -29,28 +30,75 @@ for line in f:
                  'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
                  'GDP': int(line[9]), 'Life Exp': int(line[10])}
 
-pos_a = []
-for item in info_dict.values():
-    pos_a.append(item['Pos Affect'])
+def get_var(info_dict, key):
+  temp = []
+  for item in info_dict.values():
+    temp.append(item[key])
+  return temp
 
-neg_a = []
-for item in info_dict.values():
-    neg_a.append(item['Neg Affect'])
+def plot_relationships(x, x_key, y, y_key):
+    plt.scatter(x,y)
+    plt.title(x_key + ' versus ' + y_key)
+    plt.xlabel(x_key + ' Placement')
+    plt.ylabel(y_key + ' Placement')
+    #linear regression
+    m , b, r, p, sd = scipy.stats.linregress(x, y)
+    line = [m*x1 + b for x1 in x]
+    plt.plot(x, line, 'r')
+    plt.show()
+    print('r-value: ', r, ',\n', 'p-value: ', p)
+    return m
     
+def monte_carlo():
+    #monte carlo permutation test
+    list_r_slopes = []
+    vals = list(range(1,157))
+    for _ in range(1000):
+        yr = vals.copy()
+        np.random.shuffle(yr)
+        slope_r = scipy.stats.linregress(vals,yr)[0]
+        list_r_slopes.append(slope_r)
+    return list_r_slopes
 
-#histograms are not helpful, since data are ordinal
-    
-plt.scatter(pos_a , neg_a)
-plt.title('National Emotional Affect')
-plt.xlabel('Positive Affect Placement')
-plt.ylabel('Negative Affect Placement')
+def p_hat(slopes, slope):
+    return(2.0*len([si for si in slopes if si >= slope]) / len(slopes))
 
-m , b, r, p, sd = scipy.stats.linregress(pos_a, neg_a)
+pos_a = get_var(info_dict, 'Pos Affect')
+neg_a = get_var(info_dict, 'Neg Affect')
+ladder = get_var(info_dict, 'ladder')
+social = get_var(info_dict, 'Social Support')
+freedom = get_var(info_dict, 'Freedom')
+corruption = get_var(info_dict, 'Corruption')
+gen = get_var(info_dict, 'Generosity')
+GDP = get_var(info_dict, 'GDP')
+life = get_var(info_dict, 'Life Exp')
 
-line = [m*x + b for x in pos_a]
+key_dict = {'Pos Affect': pos_a, 'Neg Affect': neg_a, 'Ladder': ladder, 
+            'Social': social, 'Freedom': freedom, 'Corruption': corruption, 
+            'Generosity': gen, 'GDP': GDP, 'Life Exp': life}
 
-#maybe do that thing where we mix up the data?
-plt.plot(pos_a, line, 'r')
-print(r)
+done = []
+#mc = monte_carlo()
+for i in list(key_dict.keys()):
+    for j in list(key_dict.keys()): 
+        if i != j and set([i,j]) not in done:
+            m = plot_relationships(key_dict[i], i, key_dict[j], j)
+#            print(p_hat(mc, m))
+            done.append(set([i,j]))
+
+
+
+
+
+
+#x_cdf = sorted(list_r_slopes)
+#N = len(x_cdf)
+#y_cdf = [ (N-1.0-i)/N for i in range(N) ]
+#plt.title("Distr of slopes if random")
+#plt.plot(x_cdf, y_cdf, '.-')
+#plt.plot( [slope, slope], [0,1], 'k--', label='real slope' ) 
+#plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
+
+
 
 
