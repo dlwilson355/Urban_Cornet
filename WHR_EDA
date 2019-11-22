@@ -202,7 +202,7 @@ done = []
 for i in list(keys):
     for j in list(keys): 
         if i != j and set([i,j]) not in done:
-#            m = plot_relationships(info_dict, i, j)
+            m = plot_relationships(info_dict, i, j)
 #            print(p_hat(mc, m))
             done.append(set([i,j]))
         
@@ -221,8 +221,6 @@ props = dict(boxstyle='round', facecolor='white', alpha=1)
 ax.text(0.67, 0.95, textstr, transform=ax.transAxes, fontsize=14,
 verticalalignment='top', bbox=props)
 plt.hist(milt_gov, bins = 20)
-for item in vals:
-    plt.plot([item, item], [0,20])  
 plt.title('Military Spending as a Percent of Government Spending')
 #add legend
 plt.xlabel('Percent')
@@ -236,9 +234,7 @@ textstr = 'Mean: ' + str(round(statistics.mean(milt_gdp),2))+ '% \n SD: ' + str(
 props = dict(boxstyle='round', facecolor='white', alpha=1)
 ax.text(0.68, 0.95, textstr, transform=ax.transAxes, fontsize=14,
 verticalalignment='top', bbox=props)
-plt.hist(milt_gdp, bins = 'auto')
-for item in vals2:
-    plt.plot([item, item], [0,20])  
+plt.hist(milt_gdp, bins = 'auto') 
 plt.title('Military Spending as a Percent of GDP')
 plt.xlabel('Percent')
 plt.ylabel('Count')
