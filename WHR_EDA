@@ -63,7 +63,7 @@ def pairwise_delete(x, y):
 def plot_relationships(info_dict, x_key, y_key):
     ranks = ['Pos Affect','Neg Affect','Ladder', 'Social Support','Freedom','Corruption', 
             'Generosity','GDP','Life Exp']
-    marks = ['United States', 'Finland', 'South Sudan', 'Paraguay', 'Syria', 'Taiwan']
+    marks = ['United States', 'Finland', 'Central African Republic', 'Paraguay', 'Turkey', 'Taiwan']
     x, mark_x = get_var(info_dict, x_key, marks)
     y, mark_y = get_var(info_dict, y_key, marks)
     x, y = pairwise_delete(x, y)
@@ -87,8 +87,11 @@ def plot_relationships(info_dict, x_key, y_key):
         plt.ylabel(y_key)
     plt.scatter(x,y)
     plt.scatter(list(mark_x.values()), list(mark_y.values()))
+    if 'Military'in x_key or 'Military' in y_key:
+#        print(mark_x, mark_y)
+        pass
     for value in mark_x.keys():
-        if value in mark_y.keys():
+        if mark_x[value]!= 0 and mark_y[value]!=0:
             props = dict(boxstyle='round', facecolor='white', alpha=0.75)
             ax.annotate(value, (mark_x[value]-5, mark_y[value]-5), bbox = props)
     plt.title(x_key + ' versus ' + y_key)
@@ -146,7 +149,8 @@ def read_military(filename, info_dict, translate, percent_of):
     diff = set(these_countries)-set(list(info_dict.keys()))
     for item in diff:
         if item not in these_countries:
-            print(item)
+#            print(item)
+            pass
             
     return info_dict
     
@@ -174,17 +178,19 @@ info_dict = read_happiness()
 
 
 info_dict = read_military('./milt_per_gov.csv', info_dict, translate_dict, '(of Gov)')
-print(info_dict['Colombia'])
+#print(info_dict['Colombia'])
 info_dict = reconcile(info_dict)
+#print(info_dict)
 info_dict = read_military('./milt_GDP_per.csv', info_dict, translate_dict, '(of GDP)')
-print(info_dict['Colombia'])
+#print(info_dict['Colombia'])
 info_dict = reconcile(info_dict)
 
 #plot_relationships(info_dict, 'Percent Military(of GDP)', 'Percent Military(of Gov)')
 
 for item in info_dict.keys():
     if info_dict[item]['Percent Military(of GDP)'] > 6.0:
-        print(item)
+#        print(item)
+        pass
         
 
 keys = ['Pos Affect','Neg Affect','Ladder', 'Social Support','Freedom','Corruption', 
@@ -196,7 +202,7 @@ done = []
 for i in list(keys):
     for j in list(keys): 
         if i != j and set([i,j]) not in done:
-            m = plot_relationships(info_dict, i, j)
+#            m = plot_relationships(info_dict, i, j)
 #            print(p_hat(mc, m))
             done.append(set([i,j]))
         
@@ -204,17 +210,26 @@ for i in list(keys):
 
 milt_gov, _ = get_var(info_dict, 'Percent Military(of Gov)', [])
 milt_gov = [x for x in milt_gov if x != 0]
+
+marks = ['United States', 'Finland', 'Central African Republic', 'Paraguay', 'Turkey', 'Taiwan']
+
+vals = [info_dict[item]['Percent Military(of Gov)'] for item in marks if info_dict[item]['Percent Military(of Gov)']!= 0]  
+
 fig,ax = plt.subplots()
 textstr = 'Mean: ' + str(round(statistics.mean(milt_gov),2)) + '%\n SD: ' + str(round(statistics.stdev(milt_gov),4))
 props = dict(boxstyle='round', facecolor='white', alpha=1)
 ax.text(0.67, 0.95, textstr, transform=ax.transAxes, fontsize=14,
 verticalalignment='top', bbox=props)
 plt.hist(milt_gov, bins = 20)
+for item in vals:
+    plt.plot([item, item], [0,20])  
 plt.title('Military Spending as a Percent of Government Spending')
+#add legend
 plt.xlabel('Percent')
 plt.ylabel('Count')
-plt.show()
+#plt.show()
 milt_gdp, _ = get_var(info_dict, 'Percent Military(of GDP)', [])
+vals2 = [info_dict[item]['Percent Military(of GDP)'] for item in marks if info_dict[item]['Percent Military(of GDP)']!= 0]  
 milt_gdp = [x for x in milt_gdp if x != 0]
 fig,ax = plt.subplots()
 textstr = 'Mean: ' + str(round(statistics.mean(milt_gdp),2))+ '% \n SD: ' + str(round(statistics.stdev(milt_gdp),2))
@@ -222,30 +237,38 @@ props = dict(boxstyle='round', facecolor='white', alpha=1)
 ax.text(0.68, 0.95, textstr, transform=ax.transAxes, fontsize=14,
 verticalalignment='top', bbox=props)
 plt.hist(milt_gdp, bins = 'auto')
-plt.title('Military Spedning as a Percent of GDP')
+for item in vals2:
+    plt.plot([item, item], [0,20])  
+plt.title('Military Spending as a Percent of GDP')
 plt.xlabel('Percent')
 plt.ylabel('Count')
 plt.show()
 
-print(info_dict['United States'])
+#print(info_dict['United States'])
+#
 
-
-
+print(info_dict['Sweden'])
 
 #print(list(info_dict.keys()))
 
-#x_cdf = sorted(list_r_slopes)
-#N = len(x_cdf)
-#y_cdf = [ (N-1.0-i)/N for i in range(N) ]
-#plt.title("Distr of slopes if random")
-#plt.plot(x_cdf, y_cdf, '.-')
-#plt.plot( [slope, slope], [0,1], 'k--', label='real slope' ) 
-#plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
+x_cdf = sorted(milt_gov)
+N = len(x_cdf)
+y_cdf = [ (N-1.0-i)/N for i in range(N) ]
+plt.title("Military Spending by Percent of Government Spending")
+plt.plot(x_cdf, y_cdf, '.-')
+for i in range(len(vals)):
+    plt.plot([vals[i], vals[i]], [0,1], '--', label=marks[i]) 
+plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
+plt.show()
 
-
-
-
-
+x_cdf = sorted(milt_gdp)
+N = len(x_cdf)
+y_cdf = [ (N-1.0-i)/N for i in range(N) ]
+plt.title("Military Spending by Percent of GDP")
+plt.plot(x_cdf, y_cdf, '.-')
+for j in range(len(vals2)):
+    plt.plot( [vals2[j], vals2[j]], [0,1], '--', label=marks[j] ) 
+plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
 
 
 
