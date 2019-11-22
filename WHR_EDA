@@ -328,11 +328,50 @@ plt.plot(x_cdf, y_cdf, '.-')
 for j in range(len(vals2)):
     plt.plot( [vals2[j], vals2[j]], [0,1], '--', label=marks[j] ) 
 plt.xlabel("Spending Percent $(x)$");plt.ylabel("$P(X>x)$"); plt.legend();
+plt.show()
 
 
 trends = find_trends(info_dict)
-print(list_countries([['Corruption','extremely low'], ['GDP','extremely low'], ['Freedom','extremely low'],['Life Exp','extremely low']],trends))
+#print(list_countries([['Corruption','extremely low'], ['GDP','extremely low'], ['Freedom','extremely low'],['Life Exp','extremely low']],trends))
 
-cool_countries = list_countries([['Corruption','extremely low'], ['GDP','extremely low'], ['Freedom','extremely low'],['Life Exp','extremely low']],trends)
-for item in cool_countries:
-    print(trends[item]['Ladder'])
+cool_countries = list_countries([['Corruption','extremely low'], ['GDP','extremely low'], ['Freedom','extremely low'],['Life Exp','extremely low'], ['Generosity','extremely low'], ['Social Support', 'extremely low'], ['Percent Military(of GDP)','above average' ]],trends)
+#for item in cool_countries:
+#    print(trends[item]['Ladder'])
+#print(cool_countries)
+
+#TODO: among extremely happy countries, what are the probabilities of each?
+def predict_happiness(happiness_level, keys, trends): 
+    predict = {}
+    happy = list_countries([['Ladder',happiness_level]], trends)
+    for item in keys:
+        predict[item] = {'no data':0 , 'extremely high': 0 , 'high': 0 ,'above average': 0 , 'below average' : 0, 'low': 0 , 'extremely low': 0}
+    for country in happy:
+        for item in keys:
+            for jtem in predict[item].keys():
+                if trends[country][item] == jtem:
+                    predict[item][jtem] += 1
+    
+    for item in predict:
+        for jtem in predict[item]:
+            predict[item][jtem] = predict[item][jtem]/len(happy)
+    return predict
+        
+def happy_probabilities(key, predict, title):
+    if 'Military' not in key:
+        #TODO: this makes corruption look like it is going the wrong way. Reverse it with military
+        plt.bar(list(range(len(list(predict[key].values())))[1:]), list(predict[key].values())[1:])
+    else:
+        #TODO: this is not correct
+        plt.bar(list(range(len(list(predict[key].values())))[1:]), (list(predict[key].values())[1:]))
+    plt.xticks(list(range(len(list(predict[key].values())))[1:]), ('extremely \nlow', 'low', 'below \naverage', 'above \naverage','high','extremely \nhigh'))
+    plt.title(title) 
+    plt.ylabel('Percent')
+    plt.show()
+
+for item in keys:    
+    predict = predict_happiness('extremely low', keys, trends)
+    happy_probabilities(item, predict, 'Levels of ' + item + ' Among Happiest Countries')
+
+for item in keys:    
+    predict = predict_happiness('extremely high', keys, trends)
+    happy_probabilities(item, predict, 'Levels of ' + item + ' Among Least Happy Countries')
