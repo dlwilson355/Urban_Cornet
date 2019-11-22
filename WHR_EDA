@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 21 20:25:27 2019
+
+@author: sarafergus
+"""
+import matplotlib.pyplot as plt
+
+i = 0
+info_dict = {}
+f = open('./WHR.csv')
+for line in f:
+    i = i + 1
+    if i > 3:
+        line = line.strip().split(',')
+        try:
+            info_dict[line[0]] = {'ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
+                 'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
+                 'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
+                 'GDP': int(line[9]), 'Life Exp': int(line[10])}
+        except:
+            for i in range(len(line)):
+                if len(line[i]) < 1:
+                    line[i] = 0
+            info_dict[line[0]] = {'ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
+                 'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
+                 'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
+                 'GDP': int(line[9]), 'Life Exp': int(line[10])}
+
+pos_a = []
+for item in info_dict.values():
+    pos_a.append(item['Pos Affect'])
+
+neg_a = []
+for item in info_dict.values():
+    neg_a.append(item['Neg Affect'])
+    
+
+#histograms are not helpful, since data are ordinal
+    
+plt.scatter(pos_a , neg_a)
+plt.title('National Emotional Affect')
+plt.xlabel('Positive Affect Placement')
+plt.ylabel('Negative Affect Placement')
+plt.show()
+
+
+
