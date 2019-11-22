@@ -28,7 +28,7 @@ def read_happiness():
         if i > 3:
             line = line.strip().split(',')
             try:
-                info_dict[line[0]] = {'Ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
+                info_dict[line[0]] = {'Ladder': int(line[1]), 'Pos Affect': int(line[3]), 
                      'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
                      'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
                      'GDP': int(line[9]), 'Life Exp': int(line[10])}
@@ -37,7 +37,7 @@ def read_happiness():
                 for i in range(len(line)):
                     if len(line[i]) < 1:
                         line[i] = 0
-                info_dict[line[0]] = {'Ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
+                info_dict[line[0]] = {'Ladder': int(line[1]), 'Pos Affect': int(line[3]), 
                      'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
                      'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
                      'GDP': int(line[9]), 'Life Exp': int(line[10])}
@@ -165,6 +165,67 @@ def reconcile(info_dict):
         
 #def bad_data
     #pass
+def find_trends(info_dict):
+    #break into categories (extremely low, low, below average, above average, high, extremely high)
+    ranks = ['Pos Affect','Neg Affect','Ladder', 'Social Support','Freedom','Corruption', 
+            'Generosity','GDP','Life Exp']
+    keys = ['Pos Affect','Neg Affect','Ladder', 'Social Support','Freedom','Corruption', 
+            'Generosity','GDP','Life Exp','Percent Military(of GDP)',
+            'Percent Military(of Gov)']
+    data = {}
+    categories = {}
+    for val in keys:
+        info, _ = get_var(info_dict, val, [])
+        data[val] = info
+    for item in data.keys():
+        if item in ranks:
+            categories[item] = [(len(data[item]))/6, (len(data[item]))/3, len(data[item])/2, (2*len(data[item]))/3, (5*len(data[item]))/6]
+        else:
+            average = statistics.mean(data[item])
+            sd = statistics.stdev(data[item])
+            categories[item] = [average- 2*sd, average - 1*sd, average, average + 1*sd, average + 2*sd]
+    
+    #create meta- dictionary of categories
+    variable2category = {}
+    for thing in info_dict.keys():
+        variable2category[thing] = {}
+    try:
+        for item in info_dict.keys():
+            for jtem in info_dict['Colombia'].keys():
+                variable2category[item][jtem] = determine_category(categories, jtem, info_dict[item][jtem])
+    except:
+        print(item, jtem)
+        print(info_dict[item][jtem])
+        print(determine_category(categories, jtem, 1))
+        variable2category[item][jtem] = 'hi'
+        print(variable2category)
+    return variable2category       
+            
+def determine_category(categories, variable, value):
+    compare = categories[variable]
+    if value == 0:
+        return 'no data'
+    if value < compare[0]:
+        return 'extremely low'
+    elif value < compare[1]:
+        return 'low'
+    elif value < compare[2]:
+        return 'below average'
+    elif value < compare[3]:
+        return 'above average'
+    elif value < compare[4]:
+        return 'high'
+    else:
+        return 'extremely high'
+    
+def list_countries(choices, trends):
+    possibilities = list(trends.keys())[:]
+    for country in trends:
+        for item in choices:
+            if trends[country][item[0]] != item[1]:
+                possibilities.remove(country)
+                break
+    return(possibilities)
     
 translate_dict = {'Central African Rep.': 'Central African Republic', 
                   'Côte d’Ivoire': 'Ivory Coast', 'eSwatini': 'Swaziland',
@@ -202,7 +263,7 @@ done = []
 for i in list(keys):
     for j in list(keys): 
         if i != j and set([i,j]) not in done:
-            m = plot_relationships(info_dict, i, j)
+#            m = plot_relationships(info_dict, i, j)
 #            print(p_hat(mc, m))
             done.append(set([i,j]))
         
@@ -221,6 +282,7 @@ props = dict(boxstyle='round', facecolor='white', alpha=1)
 ax.text(0.67, 0.95, textstr, transform=ax.transAxes, fontsize=14,
 verticalalignment='top', bbox=props)
 plt.hist(milt_gov, bins = 20)
+ 
 plt.title('Military Spending as a Percent of Government Spending')
 #add legend
 plt.xlabel('Percent')
@@ -234,7 +296,8 @@ textstr = 'Mean: ' + str(round(statistics.mean(milt_gdp),2))+ '% \n SD: ' + str(
 props = dict(boxstyle='round', facecolor='white', alpha=1)
 ax.text(0.68, 0.95, textstr, transform=ax.transAxes, fontsize=14,
 verticalalignment='top', bbox=props)
-plt.hist(milt_gdp, bins = 'auto') 
+plt.hist(milt_gdp, bins = 'auto')
+ 
 plt.title('Military Spending as a Percent of GDP')
 plt.xlabel('Percent')
 plt.ylabel('Count')
@@ -254,7 +317,7 @@ plt.title("Military Spending by Percent of Government Spending")
 plt.plot(x_cdf, y_cdf, '.-')
 for i in range(len(vals)):
     plt.plot([vals[i], vals[i]], [0,1], '--', label=marks[i]) 
-plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
+plt.xlabel("Spending Percent$(x)$");plt.ylabel("$P(X>x)$"); plt.legend();
 plt.show()
 
 x_cdf = sorted(milt_gdp)
@@ -264,8 +327,12 @@ plt.title("Military Spending by Percent of GDP")
 plt.plot(x_cdf, y_cdf, '.-')
 for j in range(len(vals2)):
     plt.plot( [vals2[j], vals2[j]], [0,1], '--', label=marks[j] ) 
-plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
+plt.xlabel("Spending Percent $(x)$");plt.ylabel("$P(X>x)$"); plt.legend();
 
 
+trends = find_trends(info_dict)
+print(list_countries([['Corruption','extremely low'], ['GDP','extremely low'], ['Freedom','extremely low'],['Life Exp','extremely low']],trends))
 
-
+cool_countries = list_countries([['Corruption','extremely low'], ['GDP','extremely low'], ['Freedom','extremely low'],['Life Exp','extremely low']],trends)
+for item in cool_countries:
+    print(trends[item]['Ladder'])
