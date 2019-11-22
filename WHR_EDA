@@ -6,6 +6,7 @@ Created on Thu Nov 21 20:25:27 2019
 @author: sarafergus
 """
 import matplotlib.pyplot as plt
+import scipy.stats
 
 i = 0
 info_dict = {}
@@ -43,7 +44,13 @@ plt.scatter(pos_a , neg_a)
 plt.title('National Emotional Affect')
 plt.xlabel('Positive Affect Placement')
 plt.ylabel('Negative Affect Placement')
-plt.show()
 
+m , b, r, p, sd = scipy.stats.linregress(pos_a, neg_a)
+
+line = [m*x + b for x in pos_a]
+
+#maybe do that thing where we mix up the data?
+plt.plot(pos_a, line, 'r')
+print(r)
 
 
