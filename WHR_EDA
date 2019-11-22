@@ -8,35 +8,65 @@ Created on Thu Nov 21 20:25:27 2019
 import matplotlib.pyplot as plt
 import scipy.stats
 import numpy as np
+import statistics
 
-i = 0
-info_dict = {}
-f = open('./WHR.csv')
-for line in f:
-    i = i + 1
-    if i > 3:
-        line = line.strip().split(',')
-        try:
-            info_dict[line[0]] = {'ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
-                 'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
-                 'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
-                 'GDP': int(line[9]), 'Life Exp': int(line[10])}
-        except:
-            for i in range(len(line)):
-                if len(line[i]) < 1:
-                    line[i] = 0
-            info_dict[line[0]] = {'ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
-                 'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
-                 'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
-                 'GDP': int(line[9]), 'Life Exp': int(line[10])}
-
-def get_var(info_dict, key):
+def get_var(info_dict, key, marks):
   temp = []
-  for item in info_dict.values():
-    temp.append(item[key])
-  return temp
+  mark_vals = {}
+  for country, values in info_dict.items():
+    temp.append(values[key])
+    if country in marks:
+        mark_vals[country] = values[key]
+  return temp, mark_vals
 
-def plot_relationships(x, x_key, y, y_key):
+def read_happiness():
+    i = 0
+    info_dict = {}
+    f = open('./WHR.csv')
+    for line in f:
+        i = i + 1
+        if i > 3:
+            line = line.strip().split(',')
+            try:
+                info_dict[line[0]] = {'Ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
+                     'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
+                     'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
+                     'GDP': int(line[9]), 'Life Exp': int(line[10])}
+            except:
+                #no data. Make zero. Do not include in statistics and charts (piecewise)
+                for i in range(len(line)):
+                    if len(line[i]) < 1:
+                        line[i] = 0
+                info_dict[line[0]] = {'Ladder': int(line[1]), 'SD ladder': int(line[2]), 'Pos Affect': int(line[3]), 
+                     'Neg Affect': int(line[4]), 'Social Support': int(line[5]), 
+                     'Freedom': int(line[6]), 'Corruption': int(line[7]), 'Generosity': int(line[8]), 
+                     'GDP': int(line[9]), 'Life Exp': int(line[10])}
+    return info_dict
+
+
+#TODO: delete pairwise before plotting/doing relationship statistics.
+def pairwise_delete(x, y):
+    x_copy = x[:]
+    y_copy = y[:]
+    for i in range(len(x)):
+        if x[i] == 0 or y[i] == 0:
+            x_copy.remove(x[i])
+            y_copy.remove(y[i])
+        #for Saudi Arabia Outlier
+#        if x[i] > 6.0:
+#            x_copy.remove(x[i])
+#            y_copy.remove(y[i])
+    return x_copy, y_copy
+
+#TODO: reverse axes? 
+#TODO: mark particular countries, if possible
+def plot_relationships(info_dict, x_key, y_key):
+    ranks = ['Pos Affect','Neg Affect','Ladder', 'Social Support','Freedom','Corruption', 
+            'Generosity','GDP','Life Exp']
+    marks = ['United States', 'Finland', 'South Sudan', 'Paraguay', 'Syria', 'Taiwan']
+    x, mark_x = get_var(info_dict, x_key, marks)
+    y, mark_y = get_var(info_dict, y_key, marks)
+    x, y = pairwise_delete(x, y)
     #linear regression
     m , b, r, p, sd = scipy.stats.linregress(x, y)
     line = [m*x1 + b for x1 in x]
@@ -45,13 +75,26 @@ def plot_relationships(x, x_key, y, y_key):
     props = dict(boxstyle='round', facecolor='white', alpha=1)
     ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
     verticalalignment='top', bbox=props)
+    if x_key in ranks:
+        ax.set_xlim(max(x) + 10,min(x) - 10)
+        plt.xlabel(x_key + ' Ranking')
+    else:
+        plt.xlabel(x_key)
+    if y_key in ranks:
+        ax.set_ylim(max(y) + 10, min(y) -10) 
+        plt.ylabel(y_key + ' Ranking')
+    else:
+        plt.ylabel(y_key)
     plt.scatter(x,y)
+    plt.scatter(list(mark_x.values()), list(mark_y.values()))
+    for value in mark_x.keys():
+        if value in mark_y.keys():
+            props = dict(boxstyle='round', facecolor='white', alpha=0.75)
+            ax.annotate(value, (mark_x[value]-5, mark_y[value]-5), bbox = props)
     plt.title(x_key + ' versus ' + y_key)
-    plt.xlabel(x_key + ' Placement')
-    plt.ylabel(y_key + ' Placement')
     plt.plot(x, line, 'r')
 #    plt.show()
-    plt.savefig('./EDA' + x_key + y_key)
+#    plt.savefig('./EDA' + x_key + y_key)
     return m
     
 def monte_carlo():
@@ -68,33 +111,128 @@ def monte_carlo():
 def p_hat(slopes, slope):
     return(2.0*len([si for si in slopes if si >= slope]) / len(slopes))
 
-pos_a = get_var(info_dict, 'Pos Affect')
-neg_a = get_var(info_dict, 'Neg Affect')
-ladder = get_var(info_dict, 'ladder')
-social = get_var(info_dict, 'Social Support')
-freedom = get_var(info_dict, 'Freedom')
-corruption = get_var(info_dict, 'Corruption')
-gen = get_var(info_dict, 'Generosity')
-GDP = get_var(info_dict, 'GDP')
-life = get_var(info_dict, 'Life Exp')
+#TODO: deal with commas in the Country name, EX congo
+#TODO: combine with other read function
+def read_military(filename, info_dict, translate, percent_of):
+    f = open(filename)
+    these_countries= []
+    for line in f:
+                    
+        #no longer a country or heading line
+        if 'xxx' in line or '%' not in line:
+            continue
+        
+            
+        line = line.strip()
+        line = line.split(',')
+        #missing data
+        if '. .' in line[-1]:
+            line[-1] = '0'
+        
+        country = line[0].strip('"')
+        percent = float(line[-1].strip('%'))
+        
+        #need translation dictionary
+        if country in list(translate.keys()):
+            country = translate[country]
+            
+        if country in info_dict.keys():
+            info_dict[country]['Percent Military' + percent_of] = percent
+        else:
+            pass
+        
+    #missing countries
+        these_countries.append(country)
+    diff = set(these_countries)-set(list(info_dict.keys()))
+    for item in diff:
+        if item not in these_countries:
+            print(item)
+            
+    return info_dict
+    
 
-key_dict = {'Pos Affect': pos_a, 'Neg Affect': neg_a, 'Ladder': ladder, 
-            'Social': social, 'Freedom': freedom, 'Corruption': corruption, 
-            'Generosity': gen, 'GDP': GDP, 'Life Exp': life}
+#TODO: incorpoate this into checks 
+def reconcile(info_dict):
+    for item in info_dict.keys():
+        for jtem in info_dict['Colombia'].keys():
+            if jtem not in info_dict[item].keys():
+                info_dict[item][jtem] = 0
+    return info_dict
+        
+#def bad_data
+    #pass
+    
+translate_dict = {'Central African Rep.': 'Central African Republic', 
+                  'Côte d’Ivoire': 'Ivory Coast', 'eSwatini': 'Swaziland',
+                  'Dominican Rep.': 'Dominican Republic', 
+                  'Trinidad & Tobago': 'Trinidad and Tobago', 
+                  'USA': 'United States', 'United States of America' : 'United States',
+                  'Viet Nam': 'Vietnam', 'UK': 'United Kingdom', 'UAE': 'United Arab Emirates'}
+##############################################################################
+
+info_dict = read_happiness()
+
+
+info_dict = read_military('./milt_per_gov.csv', info_dict, translate_dict, '(of Gov)')
+print(info_dict['Colombia'])
+info_dict = reconcile(info_dict)
+info_dict = read_military('./milt_GDP_per.csv', info_dict, translate_dict, '(of GDP)')
+print(info_dict['Colombia'])
+info_dict = reconcile(info_dict)
+
+#plot_relationships(info_dict, 'Percent Military(of GDP)', 'Percent Military(of Gov)')
+
+for item in info_dict.keys():
+    if info_dict[item]['Percent Military(of GDP)'] > 6.0:
+        print(item)
+        
+
+keys = ['Pos Affect','Neg Affect','Ladder', 'Social Support','Freedom','Corruption', 
+            'Generosity','GDP','Life Exp','Percent Military(of GDP)',
+            'Percent Military(of Gov)']
 
 done = []
 #mc = monte_carlo()
-for i in list(key_dict.keys()):
-    for j in list(key_dict.keys()): 
+for i in list(keys):
+    for j in list(keys): 
         if i != j and set([i,j]) not in done:
-            m = plot_relationships(key_dict[i], i, key_dict[j], j)
+            m = plot_relationships(info_dict, i, j)
 #            print(p_hat(mc, m))
             done.append(set([i,j]))
+        
+
+
+milt_gov, _ = get_var(info_dict, 'Percent Military(of Gov)', [])
+milt_gov = [x for x in milt_gov if x != 0]
+fig,ax = plt.subplots()
+textstr = 'Mean: ' + str(round(statistics.mean(milt_gov),2)) + '%\n SD: ' + str(round(statistics.stdev(milt_gov),4))
+props = dict(boxstyle='round', facecolor='white', alpha=1)
+ax.text(0.67, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+verticalalignment='top', bbox=props)
+plt.hist(milt_gov, bins = 20)
+plt.title('Military Spending as a Percent of Government Spending')
+plt.xlabel('Percent')
+plt.ylabel('Count')
+plt.show()
+milt_gdp, _ = get_var(info_dict, 'Percent Military(of GDP)', [])
+milt_gdp = [x for x in milt_gdp if x != 0]
+fig,ax = plt.subplots()
+textstr = 'Mean: ' + str(round(statistics.mean(milt_gdp),2))+ '% \n SD: ' + str(round(statistics.stdev(milt_gdp),2))
+props = dict(boxstyle='round', facecolor='white', alpha=1)
+ax.text(0.68, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+verticalalignment='top', bbox=props)
+plt.hist(milt_gdp, bins = 'auto')
+plt.title('Military Spedning as a Percent of GDP')
+plt.xlabel('Percent')
+plt.ylabel('Count')
+plt.show()
+
+print(info_dict['United States'])
 
 
 
 
-
+#print(list(info_dict.keys()))
 
 #x_cdf = sorted(list_r_slopes)
 #N = len(x_cdf)
@@ -103,6 +241,11 @@ for i in list(key_dict.keys()):
 #plt.plot(x_cdf, y_cdf, '.-')
 #plt.plot( [slope, slope], [0,1], 'k--', label='real slope' ) 
 #plt.xlabel("$m$");plt.ylabel("$P(M>m)$"); plt.legend();
+
+
+
+
+
 
 
 
