@@ -37,16 +37,21 @@ def get_var(info_dict, key):
   return temp
 
 def plot_relationships(x, x_key, y, y_key):
+    #linear regression
+    m , b, r, p, sd = scipy.stats.linregress(x, y)
+    line = [m*x1 + b for x1 in x]
+    fig,ax = plt.subplots()
+    textstr = 'r-value: ' + str(round(r,4)) + '\n p-value: ' + str(round(p,4))
+    props = dict(boxstyle='round', facecolor='white', alpha=1)
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+    verticalalignment='top', bbox=props)
     plt.scatter(x,y)
     plt.title(x_key + ' versus ' + y_key)
     plt.xlabel(x_key + ' Placement')
     plt.ylabel(y_key + ' Placement')
-    #linear regression
-    m , b, r, p, sd = scipy.stats.linregress(x, y)
-    line = [m*x1 + b for x1 in x]
     plt.plot(x, line, 'r')
-    plt.show()
-    print('r-value: ', r, ',\n', 'p-value: ', p)
+#    plt.show()
+    plt.savefig('./EDA' + x_key + y_key)
     return m
     
 def monte_carlo():
